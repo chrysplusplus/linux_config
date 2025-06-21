@@ -1,0 +1,7 @@
+**/*
+!.gitignore
+!nvim
+nvim/*
+!nvim/init.vim
+!nvim/autoload
+!nvim/autoload/plug.vim

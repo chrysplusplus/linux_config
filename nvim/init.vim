@@ -586,8 +586,6 @@ set expandtab
 set wildignore+=*/__pycache__
 set wildignore+=*/__pycache__/*
 set wildignore+=*.bak
-set wildignore+=NTUSER.*
-set wildignore+=ntuser.*
 
 set nocompatible
 set hidden

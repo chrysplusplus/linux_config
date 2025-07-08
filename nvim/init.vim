@@ -602,6 +602,11 @@ nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
 " Remap Ctrl-S in insert mode to save the current file without leaving insert
 " mode
 imap <C-S> <C-O><C-S>
+" Ctrl-Shift-S to save all modified files
+nnoremap <silent> <C-S-S> <CMD>wall<CR>
+" ...and in insert mode
+imap <C-S-S> <C-O><C-S-S>
+
 " Remap Leader + Ctrl-Z to open terminal in a new tab
 noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>
 " Remap Ctrl-Z so it doesn't hang in cmd.exe

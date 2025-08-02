@@ -564,6 +564,13 @@ command! -register ClearReg
 "   change directory to wiki root
 command! Vcd call ChangeDirectoryToWikiRoot(bufnr())
 
+" ClipHTMLToMarkdown
+" ClipMarkdownToHTML
+"   commands for converting clipboard buffer to/from markdown
+"   (for now this is linux only)
+command! ClipHTMLToMarkdown !~/scripts/clip_html_to_markdown.sh
+command! ClipMarkdownToHTML !~/scripts/clip_markdown_to_html.sh
+
 " =================
 " Vim Configuration
 " =================

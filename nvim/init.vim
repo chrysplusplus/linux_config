@@ -2,6 +2,19 @@
 " Functions
 " =========
 
+" ChangeDirectoryToWikiRoot (bufnr)
+"   sets the current working directory to the root directory for the wiki for
+"   the specified buffer
+function! ChangeDirectoryToWikiRoot(bufnr)
+  let wiki_nr = getbufvar(a:bufnr, "vimwiki_wiki_nr", -1)
+  if wiki_nr == -1
+    return
+  endif
+
+  let wiki_path =  vimwiki#vars#get_wikilocal('path', wiki_nr)
+  execute "lchdir" wiki_path
+endfunction
+
 " SetTermProg(prog, args, ...)
 "   set the terminal program for the current buffer
 function! SetTermProg(...)
@@ -546,6 +559,10 @@ command! -register ClearReg
       \ if !empty('<reg>') |
       \   call setreg('<reg>','') |
       \ endif
+
+" Vcd
+"   change directory to wiki root
+command! Vcd call ChangeDirectoryToWikiRoot(bufnr())
 
 " =================
 " Vim Configuration

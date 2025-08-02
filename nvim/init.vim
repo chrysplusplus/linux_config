@@ -622,6 +622,10 @@ nnoremap <silent> <C-S-S> <CMD>wall<CR>
 " ...and in insert mode
 imap <C-S-S> <C-O><C-S-S>
 
+" Load view and make view set to F5 and Shift+F5 respectively
+nnoremap <F5> <CMD>loadview<CR>
+nnoremap <F17> <CMD>mkview<CR>
+
 " Remap Leader + Ctrl-Z to open terminal in a new tab
 noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>
 " Remap Ctrl-Z so it doesn't hang in cmd.exe

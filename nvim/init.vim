@@ -623,8 +623,8 @@ nnoremap <silent> <C-S-S> <CMD>wall<CR>
 imap <C-S-S> <C-O><C-S-S>
 
 " Load view and make view set to F5 and Shift+F5 respectively
-nnoremap <F5> <CMD>loadview<CR>
-nnoremap <F17> <CMD>mkview<CR>
+nnoremap <F5> <CMD>loadview<BAR>echo "Loaded view"<CR>
+nnoremap <F17> <CMD>mkview<BAR>echo "Created view"<CR>
 
 " Remap Leader + Ctrl-Z to open terminal in a new tab
 noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>

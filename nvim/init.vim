@@ -864,6 +864,18 @@ let personal_wiki.auto_toc = 1
 let personal_wiki.auto_tags = 1
 let personal_wiki.auto_generate_tags = 1
 
+let notes_wiki = {}
+let notes_wiki.path = '~/Documents/Notes/'
+let notes_wiki.name = 'Notes Wiki'
+let notes_wiki.syntax = 'markdown'
+let notes_wiki.ext = '.md'
+let notes_wiki.diary_caption_level = 1
+let notes_wiki.auto_diary_index = 1
+let notes_wiki.auto_toc = 1
+let notes_wiki.auto_tags = 1
+let notes_wiki.auto_generate_tags = 1
+let notes_wiki.index = 'the note'
+
 let techtona_wiki = {}
 let techtona_wiki.path = '~/Documents/Writing/techtona_wiki/'
 let techtona_wiki.name = 'Techtona Wiki'
@@ -875,7 +887,7 @@ let techtona_wiki.auto_toc = 1
 let techtona_wiki.auto_tags = 1
 let techtona_wiki.auto_generate_tags = 1
 
-let g:vimwiki_list = [personal_wiki, techtona_wiki]
+let g:vimwiki_list = [personal_wiki, notes_wiki, techtona_wiki]
 
 " coc_nvim configuration
 let g:coc_snippet_prev = ''

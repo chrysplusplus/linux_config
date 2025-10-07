@@ -5,3 +5,6 @@ nvim/*
 !nvim/init.vim
 !nvim/autoload
 !nvim/autoload/plug.vim
+!mpv
+!mpv/input.conf
+!mpv/mpv.conf

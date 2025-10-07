@@ -247,63 +247,55 @@ function! CurrentDirectoryDetail()
   return '%#airline_a# %{fnamemodify(getcwd(), '':t'')} %#TabLineFill#'
 endfunction
 
-" TODO: Clean up this code
-" Split the single symbol display flags from the long form flags
-" Long form flags just have an eval string, i.e. "virtualedit != ''"
+let g:tabline_symbols = {
+      \ 'cursorline': '=',
+      \ 'hlsearch':   'φ',
+      \ 'linebreak':  ']',
+      \ 'list':       '¶',
+      \ 'spell':      '¤',
+      \ 'wrap':       'W',
+      \ }
 
-let g:tabline_flags = {}
-let g:tabline_flags.list = {'value': v:true, 'display': '¶'}
-let g:tabline_flags.spell = {'value': v:true, 'display': '¤'}
-let g:tabline_flags.cursorline = {'value': v:true, 'display': '='}
-let g:tabline_flags.virtualedit = {'value': '', 'flag': 've', 'condition': '!='}
-let g:tabline_flags.colorcolumn = {'value': '', 'condition': '!=', 'flag': 'cc'}
-let g:tabline_flags.textwidth = {'value': 0, 'condition': '!=', 'flag': 'tw'}
-let g:tabline_flags.tabstop = {'value': 2, 'condition': '!=', 'flag': 'ts'}
-let g:tabline_flags.number = {'value': v:true, 'flag': '#'}
-let g:tabline_flags.hlsearch = {'value': v:true, 'display': 'φ'}
-let g:tabline_flags.scrolloff = {'value': 0, 'condition': '!=', 'flag': 'so'}
-let g:tabline_flags.wrap = {'value': v:true, 'display': 'W'}
-let g:tabline_flags.linebreak = {'value': v:true, 'display': ']'}
-
-" TabDetail
-function! TabDetail()
-  let result = ''
-
-  let flags = []
-  let long_flags = []
-  for flag in keys(g:tabline_flags)
-    let condition = g:tabline_flags[flag]->get("condition", "==")
-    let value = string(g:tabline_flags[flag].value)
-
-    execute 'let do_set_flag = &' .. flag .. ' ' .. condition .. ' ' value
-
-    if do_set_flag
-      let display = g:tabline_flags[flag]->get("flag", "")
-      if display->len() == 0
-        let display = g:tabline_flags[flag]->get("display", "")
-        if display->len() != 0
-          call add(flags, display)
-        endif
-      elseif display->len() == 1
-        call add(flags, display)
-      else
-        execute 'let flag_value = &' .. flag
-        call add(long_flags, display .. '=' .. flag_value)
-      endif
+" TablineSymbols
+"   display symbols to indicate specified settings
+function! TablineSymbols()
+  let symbols = ''
+  for [opt_name, symbol] in items(g:tabline_symbols)
+    let do_display = 0
+    execute 'let do_display = &' .. opt_name .. ' == v:true'
+    if !do_display
+      continue
     endif
+
+    let symbols .= symbol
   endfor
 
-  let result .= long_flags->sort()->join(', ')
-  if long_flags->len() > 0
-    let result .= ' '
-  endif
+  return symbols
+endfunction
 
-  let result .= flags->sort()->join('')
-  if flags->len() > 0
-    let result .= ' '
-  endif
+let g:tabline_flags = {
+      \ 'virtualedit': ['ve', {val -> val != ''}],
+      \ 'colorcolumn': ['cc', {val -> val != ''}],
+      \ 'textwidth':   ['tw', {val -> val != 0}],
+      \ 'tabstop':     ['ts', {val -> val != 2}],
+      \ 'scrolloff':   ['so', {val -> val != 0}],
+      \ }
 
-  return result
+" TablineFlags
+"   display flags when specified settings **don't** meet a default condition
+function! TablineFlags()
+  let flags = []
+  for opt_name in keys(g:tabline_flags)
+    let [flag_display, Condition_fn] = g:tabline_flags[opt_name]
+    execute 'let opt_val = &' .. opt_name
+    if !Condition_fn(opt_val)
+      continue
+    endif
+
+    call add(flags, flag_display .. '=' .. opt_val)
+  endfor
+
+  return flags->sort()->join(', ')
 endfunction
 
 " TabPageDetail
@@ -416,15 +408,31 @@ function! VimwikiTabline()
   return s:highlight_modified(tabline) .. ' ' .. ' %='
 endfunction
 
+" TablineFlagsAndSymbols
+"   combine tabline for flags and values
+function! TablineFlagsAndSymbols()
+  let tabline = ''
+  let flags = TablineFlags()
+  let tabline .= flags
+  if flags->len() > 0
+    let tabline .= ' '
+  endif
+  let symbols = TablineSymbols()
+  let tabline .= symbols
+  if symbols->len() > 0
+    let tabline .= ' '
+  endif
+  return tabline
+endfunction
+
+" TODO this code could also do with cleanup
+
 " flags for filetypes
 let g:tabline_ft = {}
 let g:tabline_ft.netrw = {'fn': function("CustomNetrwTabline")}
 let g:tabline_ft.help = {'fn': function("HelpTabline")}
 let g:tabline_ft.TelescopePrompt = {'fn': function("TelescopeTabline"), 'nofiletype': 1}
 let g:tabline_ft.vimwiki = {'fn': function("VimwikiTabline"), 'nofiletype': 1}
-
-" do rapid updating of tabline
-"let g:tabline_rapid_update = v:false  " disabled due to performance issues
 
 " CustomTabline
 function! CustomTabline()
@@ -436,7 +444,7 @@ function! CustomTabline()
       if !g:tabline_ft[ft]->get("nofiletype")
         let tabline .= ' [' .. ft .. '] '
       endif
-      let tabline .= '%{%TabDetail()%}'
+      let tabline .= '%{%TablineFlagsAndSymbols()%}'
       let tabline .= '%{%TabPageDetail()%}'
       return tabline
     endif
@@ -445,7 +453,7 @@ function! CustomTabline()
   let tabline = ''
   let tabline .= '%{%CurrentDirectoryDetail()%}'
   let tabline .= '%{%CustomDefaultTabline()%}'
-  let tabline .= '%{%TabDetail()%}'
+  let tabline .= '%{%TablineFlagsAndSymbols()%}'
   let tabline .= '%{%TabPageDetail()%}'
 
   return tabline
@@ -462,7 +470,7 @@ function! GoyoTabline()
       if !g:tabline_ft[ft]->get("nofiletype")
         let tabline .= ' [' .. ft .. '] '
       endif
-      let tabline .= '%{%TabDetail()%}'
+      let tabline .= '%{%TablineFlagsAndSymbols()%}'
       return tabline
     endif
   endfor
@@ -470,7 +478,7 @@ function! GoyoTabline()
   let tabline = ''
   "let tabline .= '%{%CurrentDirectoryDetail()%}'
   let tabline .= '%{%CustomDefaultTabline()%}'
-  let tabline .= '%{%TabDetail()%}'
+  let tabline .= '%{%TablineFlagsAndSymbols()%}'
 
   return tabline
 endfunction

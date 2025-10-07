@@ -477,7 +477,7 @@ function! GoyoTabline()
 
   let tabline = ''
   "let tabline .= '%{%CurrentDirectoryDetail()%}'
-  let tabline .= '%{%CustomDefaultTabline()%}'
+  let tabline .= '%=%{%CustomDefaultTabline()%}'
   "let tabline .= '%{%TablineFlagsAndSymbols()%}'
 
   return tabline

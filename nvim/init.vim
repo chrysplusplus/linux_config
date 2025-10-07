@@ -444,7 +444,7 @@ function! CustomTabline()
       if !g:tabline_ft[ft]->get("nofiletype")
         let tabline .= ' [' .. ft .. '] '
       endif
-      let tabline .= '%{%TablineFlagsAndSymbols()%}'
+      "let tabline .= '%{%TablineFlagsAndSymbols()%}'
       let tabline .= '%{%TabPageDetail()%}'
       return tabline
     endif
@@ -453,7 +453,7 @@ function! CustomTabline()
   let tabline = ''
   let tabline .= '%{%CurrentDirectoryDetail()%}'
   let tabline .= '%{%CustomDefaultTabline()%}'
-  let tabline .= '%{%TablineFlagsAndSymbols()%}'
+  "let tabline .= '%{%TablineFlagsAndSymbols()%}'
   let tabline .= '%{%TabPageDetail()%}'
 
   return tabline
@@ -470,7 +470,7 @@ function! GoyoTabline()
       if !g:tabline_ft[ft]->get("nofiletype")
         let tabline .= ' [' .. ft .. '] '
       endif
-      let tabline .= '%{%TablineFlagsAndSymbols()%}'
+      "let tabline .= '%{%TablineFlagsAndSymbols()%}'
       return tabline
     endif
   endfor
@@ -478,7 +478,7 @@ function! GoyoTabline()
   let tabline = ''
   "let tabline .= '%{%CurrentDirectoryDetail()%}'
   let tabline .= '%{%CustomDefaultTabline()%}'
-  let tabline .= '%{%TablineFlagsAndSymbols()%}'
+  "let tabline .= '%{%TablineFlagsAndSymbols()%}'
 
   return tabline
 endfunction
@@ -824,17 +824,16 @@ call plug#end()
 
 " airline customisation
 let g:airline_symbols_ascii = 1
-"let g:airline_stl_path_style = 'short'
 "   call to function set defaults for filetypes variable, which we then extend
 call airline#extensions#wordcount#apply()
 let g:airline#extensions#wordcount#filetypes += ['vimwiki']
-"   enable ctrlspace integration
-let g:airline#extensions#ctrlspace#enabled = 1
-"   tabline customisation
-"let g:airline#extensions#tabline#enabled = 1
-"let g:airline#extensions#tabline#show_buffers = 1
-"let g:airline#extensions#tabline#formatter = 'unique_tail'
-"let g:airline#extensions#tabline#buffers_label = 'bufs'
+
+" airline advanced customisation
+function! ChrysAirlineInit()
+  let g:airline_section_x = airline#section#create(['%{TablineFlagsAndSymbols()}', ' ']) .. g:airline_section_x
+endfunction
+
+autocmd User AirlineAfterInit call ChrysAirlineInit()
 
 " vimwiki customisation
 let g:vimwiki_global_ext = 0

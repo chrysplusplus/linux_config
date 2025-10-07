@@ -637,9 +637,18 @@ nnoremap <silent> <C-S-S> <CMD>wall<CR>
 " ...and in insert mode
 imap <C-S-S> <C-O><C-S-S>
 
+function! SafeLoadView()
+  try
+    loadview
+    echo 'Loaded view'
+  catch /Vim(loadview):E484/
+    echo 'No saved view'
+  endtry
+endfunction
+
 " Load view and make view set to F5 and Shift+F5 respectively
-nnoremap <F5> <CMD>loadview<BAR>echo "Loaded view"<CR>
-nnoremap <F17> <CMD>mkview<BAR>echo "Created view"<CR>
+nnoremap <F5> <CMD>call SafeLoadView()<CR>
+nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
 
 " Remap Leader + Ctrl-Z to open terminal in a new tab
 noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>

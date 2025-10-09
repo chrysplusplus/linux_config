@@ -15,12 +15,14 @@ function! ChangeDirectoryToWikiRoot(bufnr)
   execute "lchdir" wiki_path
 endfunction
 
+" Note: May be removed in the future
 " SetTermProg(prog, args, ...)
 "   set the terminal program for the current buffer
 function! SetTermProg(...)
   let b:term_prog_cmd = join(a:000)
 endfunction
 
+" Note: May be removed in the future
 " ClearTermProg()
 "   clears the current terminal program for the current buffer
 function! ClearTermProg()
@@ -135,6 +137,7 @@ function! s:config_cpp_mappings()
   vnoremap <silent> <buffer> gd y<CMD>vim/\<<C-R>"\>/gj **/*.h **/*.cpp<BAR>copen<CR>
 endfunction
 
+" Note: May be removed in the future
 " s:tabpage_term_winid()
 "   returns the window id for the terminal buffer in a tab
 "   or -1 if there isn't one
@@ -161,6 +164,7 @@ function! s:tabpage_term_winid()
   return -1
 endfunction
 
+" Note: May be removed in the future
 " TODO check if colours need fixing
 " set better ANSI colors from powershell for the interactive terminal
 let g:term_cmd = "/bin/bash"
@@ -178,6 +182,7 @@ function! s:name_term_default(name)
   silent! execute "keepalt file" title
 endfunction
 
+" Note: May be removed in the future
 " OpenCustomTerminal()
 "   open customer powershell terminal job at the bottom of the screen
 function! OpenCustomTerminal()
@@ -515,6 +520,17 @@ function! s:toggle_zen_mode(...)
   return zen_mode
 endfunction
 
+" SafeLoadView
+"   attempt to run builin loadview, but give a nicer message if command errors
+function! SafeLoadView()
+  try
+    loadview
+    echo 'Loaded view'
+  catch /Vim(loadview):E484/
+    echo 'No saved view'
+  endtry
+endfunction
+
 " ========
 " Commands
 " ========
@@ -637,23 +653,16 @@ nnoremap <silent> <C-S-S> <CMD>wall<CR>
 " ...and in insert mode
 imap <C-S-S> <C-O><C-S-S>
 
-function! SafeLoadView()
-  try
-    loadview
-    echo 'Loaded view'
-  catch /Vim(loadview):E484/
-    echo 'No saved view'
-  endtry
-endfunction
-
 " Load view and make view set to F5 and Shift+F5 respectively
 nnoremap <F5> <CMD>call SafeLoadView()<CR>
 nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
 
-" Remap Leader + Ctrl-Z to open terminal in a new tab
-noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>
-" Remap Ctrl-Z so it doesn't hang in cmd.exe
-noremap <silent> <C-Z> <CMD>OpenCustomTerminal<CR>
+" Disabled in favour of tmux, will remove in future
+"" Remap Leader + Ctrl-Z to open terminal in a new tab
+"noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>
+"" Remap Ctrl-Z so it doesn't hang in cmd.exe
+"noremap <silent> <C-Z> <CMD>OpenCustomTerminal<CR>
+
 " Ctrl-Backspace to Ctrl-W in Insert and Command mode
 imap <C-H> <C-W>
 cmap <C-H> <C-W>

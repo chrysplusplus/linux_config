@@ -8,3 +8,5 @@ nvim/*
 !mpv
 !mpv/input.conf
 !mpv/mpv.conf
+!tmux
+!tmux/tmux.conf

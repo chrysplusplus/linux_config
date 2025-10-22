@@ -449,42 +449,35 @@ function! CustomTabline()
       if !g:tabline_ft[ft]->get("nofiletype")
         let tabline .= ' [' .. ft .. '] '
       endif
-      "let tabline .= '%{%TablineFlagsAndSymbols()%}'
       let tabline .= '%{%TabPageDetail()%}'
       return tabline
     endif
   endfor
 
+  " when no tabline is defined for the current filetype
   let tabline = ''
   let tabline .= '%{%CurrentDirectoryDetail()%}'
   let tabline .= '%{%CustomDefaultTabline()%}'
-  "let tabline .= '%{%TablineFlagsAndSymbols()%}'
   let tabline .= '%{%TabPageDetail()%}'
-
   return tabline
 endfunction
 
 " GoyoTabline
-"   TODO cleanup
 function! GoyoTabline()
   for ft in keys(g:tabline_ft)
     if &filetype == ft
       let tabline = ''
-      "let tabline .= '%{%CurrentDirectoryDetail()%}'
-      let tabline .= '%{%' .. string(g:tabline_ft[ft].fn) .. '()%}'
+      let tabline .= '%=%{%' .. string(g:tabline_ft[ft].fn) .. '()%}'
       if !g:tabline_ft[ft]->get("nofiletype")
         let tabline .= ' [' .. ft .. '] '
       endif
-      "let tabline .= '%{%TablineFlagsAndSymbols()%}'
       return tabline
     endif
   endfor
 
+  " when no tabline is defined for the current filetype
   let tabline = ''
-  "let tabline .= '%{%CurrentDirectoryDetail()%}'
   let tabline .= '%=%{%CustomDefaultTabline()%}'
-  "let tabline .= '%{%TablineFlagsAndSymbols()%}'
-
   return tabline
 endfunction
 

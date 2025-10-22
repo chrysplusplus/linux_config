@@ -480,15 +480,10 @@ set hidden
 " ==========
 
 " Convenience mappings
-" Remap Ctrl-S to save the current file
+" Ctrl-S to save the current file
 nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
-" Remap Ctrl-S in insert mode to save the current file without leaving insert
-" mode
+" Ctrl-S in insert mode to save the current file without leaving insert mode
 imap <C-S> <C-O><C-S>
-" Ctrl-Shift-S to save all modified files
-nnoremap <silent> <C-S-S> <CMD>wall<CR>
-" ...and in insert mode
-imap <C-S-S> <C-O><C-S-S>
 
 " Load view and make view set to F5 and Shift+F5 respectively
 nnoremap <F5> <CMD>call SafeLoadView()<CR>

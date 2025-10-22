@@ -15,29 +15,6 @@ function! ChangeDirectoryToWikiRoot(bufnr)
   execute "lchdir" wiki_path
 endfunction
 
-" Note: May be removed in the future
-" SetTermProg(prog, args, ...)
-"   set the terminal program for the current buffer
-function! SetTermProg(...)
-  let b:term_prog_cmd = join(a:000)
-endfunction
-
-" Note: May be removed in the future
-" ClearTermProg()
-"   clears the current terminal program for the current buffer
-function! ClearTermProg()
-  if !get(b:, 'term_prog_cmd', '')->empty()
-    unlet b:term_prog_cmd
-  endif
-endfunction
-
-" ConstructCommand(command_name, exec ...)
-"   (re)define user command `command_name` to execute command given by `exec`
-function! ConstructCommand(command_name, ...)
-  let cmd = ":exec \'!&" . join(a:000) . "\'"
-  execute ':command!' a:command_name cmd
-endfunction
-
 " SetMakeBuildDir(dir)
 "   set the build directory for :make
 function! SetMakeBuildDir(dir)
@@ -135,87 +112,6 @@ function! s:config_cpp_mappings()
   " remap gd to search for word under cursor in source files in directory
   nnoremap <silent> <buffer> gd <CMD>vim/\<<C-R><C-W>\>/gj **/*.h **/*.cpp<BAR>copen<CR>
   vnoremap <silent> <buffer> gd y<CMD>vim/\<<C-R>"\>/gj **/*.h **/*.cpp<BAR>copen<CR>
-endfunction
-
-" Note: May be removed in the future
-" s:tabpage_term_winid()
-"   returns the window id for the terminal buffer in a tab
-"   or -1 if there isn't one
-function! s:tabpage_term_winid()
-  let tab_info = gettabinfo(tabpagenr())
-  if tab_info->empty()
-    return -1
-  endif
-
-  let windows = get(tab_info[0], 'windows', [])
-  if windows->empty()
-    return -1
-  endif
-
-  for winid in windows
-    let wininfo = getwininfo(winid)
-    if wininfo->empty()
-      continue
-    elseif get(wininfo[0], 'terminal', 0)
-      return winid
-    endif
-  endfor
-
-  return -1
-endfunction
-
-" Note: May be removed in the future
-" TODO check if colours need fixing
-" set better ANSI colors from powershell for the interactive terminal
-let g:term_cmd = "/bin/bash"
-let g:term_cmd_title = "bash"
-
-" s:name_term_default(name)
-"   sets nicer name for default terminal
-function! s:name_term_default(name)
-  let count = 1
-  let title = a:name
-  while buflisted(title)
-    let title = a:name .. ' [' .. count .. ']'
-    let count = count + 1
-  endwhile
-  silent! execute "keepalt file" title
-endfunction
-
-" Note: May be removed in the future
-" OpenCustomTerminal()
-"   open customer powershell terminal job at the bottom of the screen
-function! OpenCustomTerminal()
-  let term_win_id = s:tabpage_term_winid()
-  let term_buf_id = get(b:, 'term_buf_id', 0)
-
-  if term_win_id != -1
-    call win_gotoid(term_win_id)
-    startinsert
-  elseif term_buf_id && buflisted(term_buf_id)
-    let term_win_id = bufwinid(term_buf_id)
-    if term_win_id == -1
-      execute 'botright new #' .. term_buf_id
-      startinsert
-    else
-      call win_gotoid(term_win_id)
-      startinsert
-    endif
-  elseif get(b:, 'term_prog_cmd', '') != ''
-    let parent_buf_id = bufnr()
-    let cmd = b:term_prog_cmd
-    botright new
-    call termopen(cmd)
-    call setbufvar(parent_buf_id, 'term_buf_id', bufnr())
-    startinsert
-  else
-    let parent_buf_id = bufnr()
-    botright new
-    call termopen(g:term_cmd)
-    call setbufvar(parent_buf_id, 'term_buf_id', bufnr())
-    call s:name_term_default(g:term_cmd_title)
-    startinsert
-  endif
 endfunction
 
 " s:config_netrw_mappings
@@ -502,22 +398,6 @@ endfunction
 " Commands
 " ========
 
-" ClearTermProg
-"   clears the current terminal program for the current buffer
-command! ClearTermProg call ClearTermProg()
-
-" SetTermProg [prog] [args] ...
-"   set the terminal program for the current buffer
-command! -nargs=+ -complete=file SetTermProg call SetTermProg(<f-args>)
-
-" OpenCustomTerminal()
-"   open customer powershell terminal job in the current window
-command! OpenCustomTerminal call OpenCustomTerminal()
-
-" ConstructCommand [command_name] [exec] ...
-"   (re)define user command `command_name` to execute command given by `exec`
-command! -nargs=+ -complete=file ConstructCommand call ConstructCommand(<f-args>)
-
 " CopyCWDToClipboard
 "   copy current working directory to clipboard
 command! CopyCWDToClipboard call setreg("*", getcwd())
@@ -527,7 +407,7 @@ command! CopyCWDToClipboard call setreg("*", getcwd())
 command! ToggleQuickfixList call s:toggle_quickfix_list()
 
 " Qdate
-"   echo quick data/set to register
+"   echo quick date/set to register
 command! -register Qdate
       \ if empty('<reg>') |
       \   echo Qdate() |
@@ -547,6 +427,7 @@ command! -register ClearReg
       \   call setreg('<reg>','') |
       \ endif
 
+" TODO: move into vimwiki autocmd group
 " Vcd
 "   change directory to wiki root
 command! Vcd call ChangeDirectoryToWikiRoot(bufnr())
@@ -574,13 +455,6 @@ set laststatus=3
 " set custom tabline
 set showtabline=2
 set tabline=%!CustomTabline()
-
-" fixes for tabline not updating enough
-"augroup chrys_tabline_fix
-"  autocmd!
-"  "autocmd CursorMoved,CursorMovedI,ModeChanged * call airline#check_mode(winnr())|redrawtabline
-"  autocmd CursorMoved,CursorMovedI,ModeChanged * if g:tabline_rapid_update|call airline#check_mode(winnr())|redrawtabline|endif
-"augroup END
 
 " default wrap settings
 set nowrap
@@ -620,22 +494,12 @@ imap <C-S-S> <C-O><C-S-S>
 nnoremap <F5> <CMD>call SafeLoadView()<CR>
 nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
 
-" Disabled in favour of tmux, will remove in future
-"" Remap Leader + Ctrl-Z to open terminal in a new tab
-"noremap <silent> <Leader><C-Z> <CMD>OpenCustomTerminal<CR>
-"" Remap Ctrl-Z so it doesn't hang in cmd.exe
-"noremap <silent> <C-Z> <CMD>OpenCustomTerminal<CR>
-
 " Ctrl-Backspace to Ctrl-W in Insert and Command mode
 imap <C-H> <C-W>
 cmap <C-H> <C-W>
+
 " Q to format paragraph (similar to vim)
 nnoremap Q <CMD>FormatParagraph<CR>
-
-" Remap i_C-E and i_C-Y to scroll
-" disabled since they cause issues with autocomplete
-"imap <C-E> <C-X><C-E>
-"imap <C-Y> <C-X><C-Y>
 
 " Bracket swapping
 nnoremap <silent> <Leader>r( m'%r)`'r(
@@ -644,14 +508,6 @@ nnoremap <silent> <Leader>r[ m'%r]`'r[
 nnoremap <silent> <Leader>r] m'%r]`'r[
 nnoremap <silent> <Leader>r{ m'%r}`'r{
 nnoremap <silent> <Leader>r} m'%r}`'r{
-
-" Terminal mode mappings
-" Escape to escape terminal mode
-tnoremap <Esc> <C-\><C-n>
-" Exit terminal
-"tnoremap <C-Q> <C-C>exit<CR>
-" Ctrl-W to escape terminal
-tmap <C-W> <C-\><C-N><C-W>p
 
 " Alt + key bindings
 nnoremap <M-q> <C-W>q
@@ -701,9 +557,9 @@ nnoremap <silent> <Leader>m <CMD>ToggleQuickfixList<CR>
 nnoremap <silent> <Leader>n <CMD>setl nu! rnu!<CR>
 
 " Preivew window mappings
-" \pp to close preview window
+" \pp to close quickfix list
 nnoremap <silent> <Leader>pp <CMD>pclose<cr>
-" \pl to close preview window
+" \pl to close locations list
 nnoremap <silent> <Leader>pl <CMD>lclose<cr>
 
 " \g to open fugitive buffer
@@ -728,38 +584,29 @@ nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
 nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
 
 " filetype mappings
-" (disabled python terminal)
 augroup chrys_map
   autocmd!
   autocmd FileType vimwiki call s:config_vimwiki_mappings()
   autocmd FileType cpp call s:config_cpp_mappings()
+  " TODO: move?
   autocmd FileType python inoremap <silent><expr> <C-J> coc#refresh()
-  " autocmd FileType python command! -buffer
-  "       \ OpenPythonTerminal botright new +call\ termopen("python")|startinsert
-  " autocmd FileType python nmap <silent><buffer> <C-Z> <CMD>OpenPythonTerminal<CR>
   autocmd FileType netrw call s:config_netrw_mappings()
-
-  " enter insert mode when window switches to a terminal
-  " (disabled for now)
-  "autocmd WinEnter * if getbufvar(bufnr(), "terminal_job_pid")|startinsert|endif
 augroup END
 
 " =====================
 " General Configuration
 " =====================
 
-" set configuration for :make
-call ResetMakeBuildDir()
-
 " filetype specific configuration
-"   disable line numbers in the terminal and vimwiki
+"   TODO: split?
+"   disable line numbers in vimwiki
 "   set textwidth and wrapping settings for markdown and vimwiki
 "   disable suggestions for vimwiki
 "   fix key mapping conflict with vimwiki and pear-tree
 "   add command for link tag hierarchy
+"   set conceallevel for markdown
 augroup chrys_filetype
   autocmd!
-  autocmd TermOpen * setlocal nonumber norelativenumber
   autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
   autocmd FileType markdown setlocal nonumber norelativenumber textwidth=80 conceallevel=2
   autocmd FileType vimwiki let b:coc_suggest_disable = 1
@@ -769,7 +616,10 @@ augroup chrys_filetype
         \ ChryswikiGenerateTagLinks call call("vimwiki#tags#generate_tags", extend([1], vimwiki#tags#get_tags()->filter('v:val =~ "'..<f-args>..'"')))
 augroup END
 
-"   open quickfix window if :make yields errors
+" set configuration for :make
+call ResetMakeBuildDir()
+
+" open quickfix window if :make yields errors
 augroup chrys_quickfix
   autocmd!
   autocmd QuickfixCmdPost make call PromptQuickfix()

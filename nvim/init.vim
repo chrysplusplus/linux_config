@@ -487,32 +487,6 @@ function! SaveCurrentModifiedFile()
   endif
 endfunction
 
-let g:chrys_zen_mode = 0
-let g:chrys_zen_mode_restore = []
-
-" s:toggle_zen_mode([set_mode])
-"   set_mode optional int set zen mode on/off
-"   return new mode
-function! s:toggle_zen_mode(...)
-  if a:0 > 0
-    let zen_mode = a:1
-  else
-    let zen_mode = !g:chrys_zen_mode
-  endif
-
-  if zen_mode
-    let g:chrys_zen_mode_restore = [&laststatus, &showtabline]
-    set laststatus=3 showtabline=1
-    let g:chrys_zen_mode = 1
-  else
-    let [&laststatus, &showtabline] = g:chrys_zen_mode_restore
-    let g:chrys_zen_mode_restore = []
-    let g:chrys_zen_mode = 0
-  endif
-
-  return zen_mode
-endfunction
-
 " SafeLoadView
 "   attempt to run builin loadview, but give a nicer message if command errors
 function! SafeLoadView()
@@ -551,10 +525,6 @@ command! CopyCWDToClipboard call setreg("*", getcwd())
 " ToggleQuickfixList
 "   toggle visibility of quickfix list window
 command! ToggleQuickfixList call s:toggle_quickfix_list()
-
-" ToggleZenMode
-"   toggle zen mode
-command! ToggleZenMode call s:toggle_zen_mode()
 
 " Qdate
 "   echo quick data/set to register

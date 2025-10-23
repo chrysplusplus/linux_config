@@ -150,6 +150,7 @@ endfunction
 
 let g:tabline_symbols = {
       \ 'cursorline': '=',
+      \ 'digraph':    '~',
       \ 'hlsearch':   'φ',
       \ 'linebreak':  ']',
       \ 'list':       '¶',

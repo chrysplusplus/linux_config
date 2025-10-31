@@ -497,6 +497,9 @@ cmap <C-H> <C-W>
 " Q to format paragraph (similar to vim)
 nnoremap Q <CMD>FormatParagraph<CR>
 
+" J to join lines without jumping (sets last mark)
+nnoremap J m'J`'
+
 " Bracket swapping
 nnoremap <silent> <Leader>r( m'%r)`'r(
 nnoremap <silent> <Leader>r) m'%r)`'r(

@@ -574,7 +574,7 @@ nnoremap <M-8> 8<C-W>w
 nnoremap <M-9> 9<C-W>w
 
 " Alt + - to 'zoom' current window (Ctr-W _)
-nnoremap <M--> <C-W>_
+nnoremap <M--> <C-W>_<C-W><bar>
 
 " Alt + = to 'equalise' windows
 nnoremap <M-=> <C-W>=

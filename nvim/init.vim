@@ -395,6 +395,38 @@ function! SafeLoadView()
   endtry
 endfunction
 
+let g:last_window_info = {}
+
+" UndoLastClose()
+"   re-open last window that was close
+"   buffer id for this window is set from autocmd
+function! UndoLastClose()
+  let bufnr = get(g:last_window_info, "bufnr", -1)
+  if bufnr == -1
+    return
+  endif
+
+  " topline defaults to first line if otherwise unknown/not set
+  let topline = get(g:last_window_info, "topline", 1)
+
+  let bufinfo = getbufinfo(bufnr)
+  if bufinfo->len() == 0
+    return
+  endif
+
+  let bufname = get(bufinfo[0], "name", "")
+  if bufname == ""
+    return
+  endif
+
+  execute "vnew +" .. topline .. " " .. bufname
+endfunction
+
+augroup chrys_undolastclose
+  autocmd!
+  autocmd WinClosed * let g:last_window_info = getwininfo(expand("<afile>"))[0]
+augroup END
+
 " ========
 " Commands
 " ========
@@ -439,6 +471,10 @@ command! Vcd call ChangeDirectoryToWikiRoot(bufnr())
 "   (for now this is linux only)
 command! ClipHTMLToMarkdown !~/scripts/clip_html_to_markdown.sh
 command! ClipMarkdownToHTML !~/scripts/clip_markdown_to_html.sh
+
+" UndoLastClose
+"   re-open last closed window in vertical
+command! UndoLastClose call UndoLastClose()
 
 " =================
 " Vim Configuration

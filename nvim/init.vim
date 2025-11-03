@@ -537,6 +537,12 @@ nnoremap <M-7> 7<C-W>w
 nnoremap <M-8> 8<C-W>w
 nnoremap <M-9> 9<C-W>w
 
+" Alt + - to 'zoom' current window (Ctr-W _)
+nnoremap <M--> <C-W>_
+
+" Alt + = to 'equalise' windows
+nnoremap <M-=> <C-W>=
+
 " Leader toggle mappings
 " \s to toggle spell check
 nnoremap <silent> <Leader>s <CMD>setl spell!<CR>

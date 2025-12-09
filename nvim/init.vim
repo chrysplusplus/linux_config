@@ -711,6 +711,7 @@ autocmd User AirlineAfterInit call ChrysAirlineInit()
 
 " vimwiki customisation
 let g:vimwiki_global_ext = 0
+let g:vimwiki_table_auto_fmt = 0
 
 " pear_tree configuration
 let g:pear_tree_ft_disabled = ['TelescopePrompt']

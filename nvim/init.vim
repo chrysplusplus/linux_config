@@ -692,6 +692,8 @@ Plug 'tpope/vim-fugitive'
 
 Plug 'junegunn/goyo.vim'
 
+Plug 'vlime/vlime', {'rtp': 'vim/'}
+
 call plug#end()
 
 " airline customisation

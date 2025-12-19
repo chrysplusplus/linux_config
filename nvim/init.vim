@@ -2,6 +2,312 @@
 " Functions
 " =========
 
+" regex patterns used for tables
+let g:table_pattern = '^|.*|$'
+let g:table_sep_pattern = '^|\(-*|\)\+$'
+
+" GetTableInfo(bufnr, linenr)
+"   return table information around a line in a buffer
+"   table information contains:
+"     bufnr: the buffer containing the table
+"     first_linenr: first line of the table
+"     last_linenr: last line of the table
+"     cols: list of column widths, assuming table is correctly formatted
+function! GetTableInfo(bufnr, linenr)
+  let lines = getbufline(a:bufnr, 1, '$')
+  let current_line = lines[a:linenr - 1]
+  let last_linenr = len(lines)
+
+  if match(current_line, g:table_pattern) == -1
+    return {}
+  endif
+
+  let table_first_linenr = a:linenr - 1
+  while match(lines[table_first_linenr], g:table_pattern) != -1
+    let table_first_linenr = table_first_linenr - 1
+    if table_first_linenr == 0
+      table_first_linenr = 1
+      break
+    endif
+  endwhile
+  let table_first_linenr = table_first_linenr + 1
+
+  let table_last_linenr = a:linenr - 1
+  while match(lines[table_last_linenr], g:table_pattern) != -1
+    let table_last_linenr = table_last_linenr + 1
+    if table_last_linenr == last_linenr
+      table_first_linenr = last_linenr - 1
+      break
+    endif
+  endwhile
+  let table_last_linenr = table_last_linenr - 1
+
+  let top_line = lines[table_first_linenr]
+  let table_cols = map(split(top_line, '|'), 'len(v:val) - 2')
+
+  let table_info = {}
+  let table_info.bufnr = a:bufnr
+  let table_info.first_linenr = table_first_linenr + 1
+  let table_info.last_linenr = table_last_linenr + 1
+  let table_info.cols = table_cols
+  return table_info
+endfunction
+
+" GetCursorTableColumn(table_info, linenr, columnnr)
+"   return column index of cursor in a table
+function! GetCursorTableColumn(table_info, linenr, columnnr)
+  if empty(a:table_info)
+    return -1
+  endif
+
+  let column_index = 0
+  let max_column_index = len(a:table_info.cols) - 1
+  let separator_offset = 1
+  while column_index <= max_column_index
+    let column_width = a:table_info.cols[column_index]
+    let separator_offset = separator_offset + column_width + 3
+    if a:columnnr < separator_offset
+      return column_index
+    endif
+
+    let column_index = column_index + 1
+  endwhile
+
+  return max_column_index
+endfunction
+
+" GetCursorTableParaRow(cursor)
+"   return paragraph-row index of cursor in a table
+function! GetCursorTableParaRow(table_info, linenr)
+  if empty(a:table_info)
+    return -1
+  endif
+
+  let table_lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:linenr)
+  let index = 0
+  let max_index = len(table_lines) - 1
+  let separator_line_count = 0
+  while index <= max_index
+    let current_line = table_lines[index]
+    if match(current_line, g:table_sep_pattern) == 0
+      let separator_line_count = separator_line_count + 1
+    endif
+
+    let index = index + 1
+  endwhile
+
+  return separator_line_count
+endfunction
+
+" GetTableColumnBounds(table_info, column_index)
+"   return the start and end of the text boundary for a column of a table
+"   return [-1,-1] if column has no text boundary
+function! GetTableColumnBounds(table_info, column_index)
+  call assert_true(a:column_index < len(a:table_info.cols))
+  let separator_offset = 1
+  let current_col_index = 0
+  while current_col_index < a:column_index
+    let separator_offset = separator_offset + a:table_info.cols[current_col_index] + 3
+    let current_col_index = current_col_index + 1
+  endwhile
+
+  let colnr_first = separator_offset + 2
+  let colnr_last = separator_offset + a:table_info.cols[a:column_index] + 1
+
+  " if column width is negative, which can happen when two column separators
+  " are adjacent, the calculations break; but we can detect this by checking
+  " if the last column is less than the first, in which case we'll early
+  " return an invalid bound
+  if colnr_last <= colnr_first
+    return [-1, -1]
+  endif
+
+  return [colnr_first, colnr_last]
+endfunction
+
+" not for exported use
+function! GetTableRowSeparators(lines, first_linenr)
+  let separator_linenrs = []
+  let index = 0
+  let max_index = len(a:lines) - 1
+  while index <= max_index
+    if match(a:lines[index], g:table_sep_pattern) == 0
+      call add(separator_linenrs, a:first_linenr + index)
+    endif
+    let index = index + 1
+  endwhile
+
+  return separator_linenrs
+endfunction
+
+" GetTableParaRowInfo(table_info, para_index)
+"   return information for a paragraph-cell text boundary of a table
+"   information Dictionary contains:
+"     before_sep_linenr: line number for the previous row separator, or -1
+"     after_sep_linenr:  line number for the next row separator, or -1
+"     text_start_linenr: line number for the text start, or -1
+"     text_end_linenr:   line number for the text end, or -1
+"   return empty Dictionary if para_index is out of bounds
+function! GetTableParaRowInfo(table_info, para_index)
+  let table_lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
+  let separator_linenrs = GetTableRowSeparators(table_lines, a:table_info.first_linenr)
+
+  if a:para_index < 0
+    return {}
+  elseif a:para_index > len(separator_linenrs)
+    return {}
+  endif
+
+  if a:para_index == 0 && len(separator_linenrs) == 0
+    let info = {}
+    let info.before_sep_linenr = -1
+    let info.after_sep_linenr = -1
+    let info.text_start_linenr = a:table_info.first_linenr
+    let info.text_end_linenr = a:table_info.last_linenr
+    return info
+  elseif len(separator_linenrs) == 0
+    return {}
+  endif
+
+  if a:para_index == 0 && separator_linenrs[0] == a:table_info.first_linenr
+    let info = {}
+    let info.before_sep_linenr = -1
+    let info.after_sep_linenr = separator_linenrs[0]
+    let info.text_start_linenr = -1
+    let info.text_end_linenr = -1
+    return info
+  elseif a:para_index == 0
+    let info = {}
+    let info.before_sep_linenr = -1
+    let info.after_sep_linenr = separator_linenrs[0]
+    let info.text_start_linenr = a:table_info.first_linenr
+    let info.text_end_linenr = separator_linenrs[0] - 1
+    return info
+  endif
+
+  let last_sep_linenr = separator_linenrs[len(separator_linenrs) - 1]
+  if a:para_index == len(separator_linenrs) && last_sep_linenr == a:table_info.last_linenr
+    let info = {}
+    let info.before_sep_linenr = last_sep_linenr
+    let info.after_sep_linenr = -1
+    let info.text_start_linenr = -1
+    let info.text_end_linenr = -1
+    return info
+  elseif a:para_index == len(separator_linenrs)
+    let info = {}
+    let info.before_sep_linenr = last_sep_linenr
+    let info.after_sep_linenr = -1
+    let info.text_start_linenr = last_sep_linenr + 1
+    let info.text_end_linenr = a:table_info.last_linenr
+    return info
+  endif
+
+  let before_sep_linenr = separator_linenrs[a:para_index - 1]
+  let after_sep_linenr = separator_linenrs[a:para_index]
+  if before_sep_linenr + 1 == after_sep_linenr
+    let info = {}
+    let info.before_sep_linenr = before_sep_linenr
+    let info.after_sep_linenr = after_sep_linenr
+    let info.text_start_linenr = -1
+    let info.text_end_linenr = -1
+    return info
+  else
+    let info = {}
+    let info.before_sep_linenr = before_sep_linenr
+    let info.after_sep_linenr = after_sep_linenr
+    let info.text_start_linenr = before_sep_linenr + 1
+    let info.text_end_linenr = after_sep_linenr - 1
+    return info
+  endif
+endfunction
+
+" SelectTableParaCell()
+"   select the paragraph-cell in the table containing the cursor
+function! SelectTableParaCell()
+  let cur = getpos('.')
+  let linenr = cur[1]
+  let columnnr = cur[2]
+
+  let table_info = GetTableInfo(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  let column_index = GetCursorTableColumn(table_info, linenr, columnnr)
+  let para_index = GetCursorTableParaRow(table_info, linenr)
+
+  let [colnr_first, colnr_last] = GetTableColumnBounds(table_info, column_index)
+  if colnr_first == -1
+    return
+  endif
+
+  let para_info = GetTableParaRowInfo(table_info, para_index)
+  if para_info.text_start_linenr == -1
+    return
+  endif
+
+  call setpos('.', [0, para_info.text_start_linenr, colnr_first, 0])
+  normal! 
+  call setpos('.', [0, para_info.text_end_linenr, colnr_last, 0])
+  normal! o
+endfunction
+
+" SelectTableColumn()
+"   select the table column containing the cursor, including the following
+"   column separator
+function! SelectTableColumn()
+  let cur = getpos('.')
+  let linenr = cur[1]
+  let columnnr = cur[2]
+
+  let table_info = GetTableInfo(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  let column_index = GetCursorTableColumn(table_info, linenr, columnnr)
+  let [colnr_first, colnr_last] = GetTableColumnBounds(table_info, column_index)
+  if colnr_first == -1
+    return
+  endif
+
+  call setpos('.', [0, table_info.first_linenr, colnr_first, 0])
+  normal! 
+  call setpos('.', [0, table_info.last_linenr, colnr_last + 2, 0])
+  normal! o
+endfunction
+
+" SelectTableParaRow()
+"   select the paragraph-row of the table containing the cursor
+function! SelectTableParaRow()
+  let cur = getpos('.')
+  let linenr = cur[1]
+  let columnnr = cur[2]
+
+  let table_info = GetTableInfo(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  let para_index = GetCursorTableParaRow(table_info, linenr)
+  let para_info = GetTableParaRowInfo(table_info, para_index)
+  if para_info.text_start_linenr == -1
+    return
+  endif
+
+  if para_info.after_sep_linenr == -1
+    call setpos('.', [0, para_info.text_start_linenr, 1, 0])
+    normal! V
+    call setpos('.', [0, para_info.text_end_linenr, 1, 0])
+    normal! $o
+  else
+    call setpos('.', [0, para_info.text_start_linenr, 1, 0])
+    normal! V
+    call setpos('.', [0, para_info.after_sep_linenr, 1, 0])
+    normal! $o
+  endif
+endfunction
+
 " ChangeDirectoryToWikiRoot (bufnr)
 "   sets the current working directory to the root directory for the wiki for
 "   the specified buffer
@@ -431,6 +737,18 @@ augroup END
 " Commands
 " ========
 
+" SelectTableParaCell
+"   select the paragraph-cell in the table containing the cursor
+command! SelectTableParaCell call SelectTableParaCell()
+
+" SelectTableColumn
+"   select the paragraph-cell in the table containing the cursor
+command! SelectTableColumn call SelectTableColumn()
+
+" SelectTableParaRow
+"   select the paragraph-cell in the table containing the cursor
+command! SelectTableParaRow call SelectTableParaRow()
+
 " CopyCWDToClipboard
 "   copy current working directory to clipboard
 command! CopyCWDToClipboard call setreg("*", getcwd())
@@ -623,6 +941,21 @@ nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
 nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
 " \em to pick a mark
 nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
+
+" \tt to select current paragraph-cell
+nnoremap <silent> <Leader>tt <CMD>SelectTableParaCell<CR>
+vnoremap <silent> <Leader>tt :<C-U>SelectTableParaCell<CR>
+onoremap <silent> <Leader>tt :<C-U>SelectTableParaCell<CR>
+
+" \tc to select current column
+nnoremap <silent> <Leader>tc <CMD>SelectTableColumn<CR>
+vnoremap <silent> <Leader>tc :<C-U>SelectTableColumn<CR>
+onoremap <silent> <Leader>tc :<C-U>SelectTableColumn<CR>
+
+" \tr to select current paragraph-row
+nnoremap <silent> <Leader>tr <CMD>SelectTableParaRow<CR>
+vnoremap <silent> <Leader>tr :<C-U>SelectTableParaRow<CR>
+onoremap <silent> <Leader>tr :<C-U>SelectTableParaRow<CR>
 
 " filetype mappings
 augroup chrys_map

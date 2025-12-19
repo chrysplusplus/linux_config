@@ -718,14 +718,12 @@ let g:pear_tree_ft_disabled = ['TelescopePrompt']
 let g:pear_tree_repeatable_expand = 0
 
 " telescope configuration
-"   map i_Escape to close telescope
 "   map i_Ctrl-Backspace to backspace
 "   map i_Ctrl-Q to select horizontal
 lua require("telescope").setup{
       \ defaults = {
       \   mappings = {
       \     i = {
-      \       ["<Esc>"] = require("telescope.actions").close,
       \       ["<C-_>"] = function()
       \         vim.cmd [[normal! bcw]]
       \       end,

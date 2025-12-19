@@ -159,12 +159,8 @@ function! GetTableParaRowInfo(table_info, para_index)
   endif
 
   if a:para_index == 0 && len(separator_linenrs) == 0
-    let info = {}
-    let info.before_sep_linenr = -1
-    let info.after_sep_linenr = -1
-    let info.text_start_linenr = a:table_info.first_linenr
-    let info.text_end_linenr = a:table_info.last_linenr
-    return info
+    " new change: tables MUST have at least one row separator
+    return {}
   elseif len(separator_linenrs) == 0
     return {}
   endif
@@ -306,6 +302,181 @@ function! SelectTableParaRow()
     call setpos('.', [0, para_info.after_sep_linenr, 1, 0])
     normal! $o
   endif
+endfunction
+
+" ListSlice(l, first, last)
+"   return a copy of l containg the elements between first and last
+function! ListSlice(l, first, last)
+  let result = []
+  for index in range(a:first, a:last)
+    call add(result, a:l[index])
+  endfor
+  return result
+endfunction
+
+" TransposeAndJoin(list_of_lists, sublist_len)
+"   return transposed list of lists, sublist_len is a number that specifies
+"   the maximum length of a sublist, default is the default value if index is
+"   not found
+function! Transpose(list_of_lists, sublist_len, default)
+  if empty(a:list_of_lists)
+    return a:list_of_lists
+  endif
+
+  let transposed = []
+  for index in range(a:sublist_len)
+    let new_elem = []
+    for sublist in a:list_of_lists
+      call add(new_elem, get(sublist, index, a:default))
+    endfor
+    call add(transposed, new_elem)
+  endfor
+  return transposed
+endfunction
+
+" WrapText(lines, width)
+"   return list of lines of paragraph lines wrapped to width
+"   any blank lines are interpreted as paragraph breaks, and so persist after
+"   wrapping
+function! WrapText(lines, width)
+  let paragraphs = []
+  let current_paragraph = ''
+  for line in a:lines
+    if empty(line)
+      call add(paragraphs, current_paragraph)
+      call add(paragraphs, '') " use empty string to represent paragraph break
+      let current_paragraph = ''
+      continue
+    endif
+
+    if empty(current_paragraph)
+      let current_paragraph = line
+    else
+      let current_paragraph = join([current_paragraph, line])
+    endif
+  endfor
+
+  if !empty(current_paragraph)
+    call add(paragraphs, current_paragraph)
+  endif
+
+  call map(paragraphs, {_,paragraph -> empty(paragraph) ? paragraph : split(paragraph)})
+  call flatten(paragraphs)
+
+  let lines = []
+  let current_line = ''
+  let is_new_paragraph = 0
+  for word in paragraphs
+    if empty(word) && empty(current_line)
+      let is_new_paragraph = 1
+      continue
+    elseif empty(word)
+      call add(lines, current_line)
+      let current_line = ''
+      let is_new_paragraph = 1
+      continue
+    endif
+
+    if is_new_paragraph
+      call add(lines, '')
+      let is_new_paragraph = 0
+    endif
+
+    if len(word) + len(current_line) + 1 > a:width
+      call add(lines, current_line)
+      let current_line = word
+    elseif empty(current_line)
+      let current_line = word
+    else
+      let current_line = join([current_line, word])
+    endif
+  endfor
+
+  if !empty(current_line)
+    call add(lines, current_line)
+  endif
+
+  return lines
+endfunction
+
+" MakeTableRowSeparatorAndFormatString(cols)
+"   return row_separator and format string
+function! MakeTableRowSeparatorAndFormatString(cols)
+  let row_separator = '|'
+  let row_format_string = '|'
+  for column_width in a:cols
+    let row_separator = row_separator .. repeat('-', column_width + 2) .. '|'
+    let row_format_string = row_format_string .. ' %-' .. column_width .. 'S |'
+  endfor
+  return [row_separator, row_format_string]
+endfunction
+
+" FormatTable()
+"   format the current table, wrapping paragraph-cells based off the width of
+"   the top line (TODO change to be the first row separator)
+function! FormatTable()
+  let cur = getpos('.')
+  let linenr = cur[1]
+  let columnnr = cur[2]
+
+  let table_info = GetTableInfo(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  let lines = getbufline(table_info.bufnr, table_info.first_linenr, table_info.last_linenr)
+
+  let row_boundaries = []
+  call add(row_boundaries, table_info.first_linenr - 1)
+  call extend(row_boundaries, GetTableRowSeparators(lines, table_info.first_linenr))
+  call add(row_boundaries, table_info.last_linenr + 1)
+
+  let row_contents = []
+  for boundary_index in range(len(row_boundaries) - 1)
+    let first_index = row_boundaries[boundary_index] - table_info.first_linenr + 1
+    let last_index = row_boundaries[boundary_index + 1] - table_info.first_linenr - 1
+    call add(row_contents, ListSlice(lines, first_index, last_index))
+  endfor
+
+  for row in row_contents
+    call map(row, {_,line -> split(line, "|")})
+    for split_line in row
+      call map(split_line, {_,column_text -> trim(column_text)})
+    endfor
+  endfor
+
+  call map(row_contents, {_,row -> Transpose(row, len(table_info.cols), '')})
+
+  let line_counts = []
+  for row in row_contents
+    call map(row, {column_index,column -> WrapText(column, table_info.cols[column_index])})
+    call add(line_counts, max(map(copy(row), {_,column -> len(column)})))
+  endfor
+
+  call map(row_contents, {row_index,row -> Transpose(row, line_counts[row_index], '')})
+
+  let [row_separator, row_format_string] = MakeTableRowSeparatorAndFormatString(table_info.cols)
+  let Printf = function("printf", [row_format_string])
+  for row in row_contents
+    if !empty(row)
+      call map(row, {_,line -> call(Printf, line)})
+    endif
+  endfor
+
+  let lines = []
+  let last_index = len(row_contents) - 1
+  for index in range(len(row_contents))
+    let row = row_contents[index]
+    if !empty(row)
+      call extend(lines, row)
+    endif
+    if index != last_index
+      call add(lines, row_separator)
+    endif
+  endfor
+
+  call deletebufline(table_info.bufnr, table_info.first_linenr, table_info.last_linenr)
+  call appendbufline(table_info.bufnr, table_info.first_linenr - 1, lines)
 endfunction
 
 " ChangeDirectoryToWikiRoot (bufnr)
@@ -749,6 +920,10 @@ command! SelectTableColumn call SelectTableColumn()
 "   select the paragraph-cell in the table containing the cursor
 command! SelectTableParaRow call SelectTableParaRow()
 
+" FormatTable
+"   format table to width of current line
+command! FormatTable call FormatTable()
+
 " CopyCWDToClipboard
 "   copy current working directory to clipboard
 command! CopyCWDToClipboard call setreg("*", getcwd())
@@ -942,20 +1117,23 @@ nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
 " \em to pick a mark
 nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
 
-" \tt to select current paragraph-cell
-nnoremap <silent> <Leader>tt <CMD>SelectTableParaCell<CR>
-vnoremap <silent> <Leader>tt :<C-U>SelectTableParaCell<CR>
-onoremap <silent> <Leader>tt :<C-U>SelectTableParaCell<CR>
+" \tt to format table
+nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
 
-" \tc to select current column
-nnoremap <silent> <Leader>tc <CMD>SelectTableColumn<CR>
-vnoremap <silent> <Leader>tc :<C-U>SelectTableColumn<CR>
-onoremap <silent> <Leader>tc :<C-U>SelectTableColumn<CR>
+" \tc to select current paragraph-cell
+nnoremap <silent> <Leader>tc <CMD>SelectTableParaCell<CR>
+vnoremap <silent> <Leader>tc :<C-U>SelectTableParaCell<CR>
+onoremap <silent> <Leader>tc :<C-U>SelectTableParaCell<CR>
 
-" \tr to select current paragraph-row
-nnoremap <silent> <Leader>tr <CMD>SelectTableParaRow<CR>
-vnoremap <silent> <Leader>tr :<C-U>SelectTableParaRow<CR>
-onoremap <silent> <Leader>tr :<C-U>SelectTableParaRow<CR>
+" \tC to select current column
+nnoremap <silent> <Leader>tC <CMD>SelectTableColumn<CR>
+vnoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
+onoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
+
+" \tR to select current paragraph-row
+nnoremap <silent> <Leader>tR <CMD>SelectTableParaRow<CR>
+vnoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
+onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
 
 " filetype mappings
 augroup chrys_map

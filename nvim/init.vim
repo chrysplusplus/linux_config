@@ -12,11 +12,13 @@ let g:table_sep_pattern = '^|\(-*|\)\+$'
 "     bufnr: the buffer containing the table
 "     first_linenr: first line of the table
 "     last_linenr: last line of the table
+"     first_row_separator_linenr: line containing first row separator
 "     cols: list of column widths, assuming table is correctly formatted
 function! GetTableInfo(bufnr, linenr)
   let lines = getbufline(a:bufnr, 1, '$')
   let current_line = lines[a:linenr - 1]
-  let last_linenr = len(lines) " TODO remove
+
+  let LineIndexInTable = {index -> match(lines[index], g:table_pattern) == 0}
 
   if match(current_line, g:table_pattern) == -1
     return {}
@@ -24,8 +26,9 @@ function! GetTableInfo(bufnr, linenr)
 
   let first_index = -1
   for index in range(a:linenr - 1, 1, -1) " adjust linenr -> index
-    if match(lines[index], g:table_pattern) == -1
+    if !LineIndexInTable(index)
       let first_index = index + 1
+      break
     endif
   endfor
 
@@ -35,8 +38,9 @@ function! GetTableInfo(bufnr, linenr)
 
   let last_index = -1
   for index in range(a:linenr - 1, len(lines) - 1)
-    if match(lines[index], g:table_pattern) == -1
+    if !LineIndexInTable(index)
       let last_index = index - 1
+      break
     endif
   endfor
 
@@ -44,15 +48,27 @@ function! GetTableInfo(bufnr, linenr)
     let last_index = len(lines) - 1
   endif
 
-  " TODO refactor so that the column widths are determined by the first row
-  " separator
-  let top_line = lines[first_index]
-  let table_cols = map(split(top_line, '|'), 'len(v:val) - 2')
+  let LineIndexIsRowSeparator = {index -> match(lines[index], g:table_sep_pattern) == 0}
+
+  let first_row_separator_index = -1
+  for index in range(first_index, last_index)
+    if LineIndexIsRowSeparator(index)
+      let first_row_separator_index = index
+      break
+    endif
+  endfor
+
+  if first_row_separator_index == -1
+    return {} " table MUST have at least one row separator
+  endif
+
+  let table_cols = map(split(lines[first_row_separator_index], '|'), {_,txt -> len(txt) - 2})
 
   let table_info = {}
   let table_info.bufnr = a:bufnr
   let table_info.first_linenr = first_index + 1
   let table_info.last_linenr = last_index + 1
+  let table_info.first_row_separator_linenr = first_row_separator_index + 1
   let table_info.cols = table_cols
   return table_info
 endfunction

@@ -242,10 +242,9 @@ function! SelectTableParaCell()
     return
   endif
 
-  call setpos('.', [0, para_info.text_start_linenr, colnr_first, 0])
-  normal! 
   call setpos('.', [0, para_info.text_end_linenr, colnr_last, 0])
-  normal! o
+  normal! 
+  call setpos('.', [0, para_info.text_start_linenr, colnr_first, 0])
 endfunction
 
 " SelectTableColumn()
@@ -267,10 +266,9 @@ function! SelectTableColumn()
     return
   endif
 
-  call setpos('.', [0, table_info.first_linenr, colnr_first, 0])
-  normal! 
   call setpos('.', [0, table_info.last_linenr, colnr_last + 2, 0])
-  normal! o
+  normal! 
+  call setpos('.', [0, table_info.first_linenr, colnr_first, 0])
 endfunction
 
 " SelectTableParaRow()

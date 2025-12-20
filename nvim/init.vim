@@ -16,39 +16,43 @@ let g:table_sep_pattern = '^|\(-*|\)\+$'
 function! GetTableInfo(bufnr, linenr)
   let lines = getbufline(a:bufnr, 1, '$')
   let current_line = lines[a:linenr - 1]
-  let last_linenr = len(lines)
+  let last_linenr = len(lines) " TODO remove
 
   if match(current_line, g:table_pattern) == -1
     return {}
   endif
 
-  let table_first_linenr = a:linenr - 1
-  while match(lines[table_first_linenr], g:table_pattern) != -1
-    let table_first_linenr = table_first_linenr - 1
-    if table_first_linenr == 0
-      table_first_linenr = 1
-      break
+  let first_index = -1
+  for index in range(a:linenr - 1, 1, -1) " adjust linenr -> index
+    if match(lines[index], g:table_pattern) == -1
+      let first_index = index + 1
     endif
-  endwhile
-  let table_first_linenr = table_first_linenr + 1
+  endfor
 
-  let table_last_linenr = a:linenr - 1
-  while match(lines[table_last_linenr], g:table_pattern) != -1
-    let table_last_linenr = table_last_linenr + 1
-    if table_last_linenr == last_linenr
-      table_first_linenr = last_linenr - 1
-      break
+  if first_index == -1
+    let first_index = 0
+  endif
+
+  let last_index = -1
+  for index in range(a:linenr - 1, len(lines) - 1)
+    if match(lines[index], g:table_pattern) == -1
+      let last_index = index - 1
     endif
-  endwhile
-  let table_last_linenr = table_last_linenr - 1
+  endfor
 
-  let top_line = lines[table_first_linenr]
+  if last_index == -1
+    let last_index = len(lines) - 1
+  endif
+
+  " TODO refactor so that the column widths are determined by the first row
+  " separator
+  let top_line = lines[first_index]
   let table_cols = map(split(top_line, '|'), 'len(v:val) - 2')
 
   let table_info = {}
   let table_info.bufnr = a:bufnr
-  let table_info.first_linenr = table_first_linenr + 1
-  let table_info.last_linenr = table_last_linenr + 1
+  let table_info.first_linenr = first_index + 1
+  let table_info.last_linenr = last_index + 1
   let table_info.cols = table_cols
   return table_info
 endfunction
@@ -243,7 +247,7 @@ function! SelectTableParaCell()
   endif
 
   call setpos('.', [0, para_info.text_end_linenr, colnr_last, 0])
-  normal! 
+  execute "normal! \<C-V>"
   call setpos('.', [0, para_info.text_start_linenr, colnr_first, 0])
 endfunction
 
@@ -267,7 +271,7 @@ function! SelectTableColumn()
   endif
 
   call setpos('.', [0, table_info.last_linenr, colnr_last + 2, 0])
-  normal! 
+  execute "normal! \<C-V>"
   call setpos('.', [0, table_info.first_linenr, colnr_first, 0])
 endfunction
 

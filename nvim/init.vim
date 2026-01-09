@@ -1,86 +1,11 @@
+" =======
+" Sources
+" =======
 source ~/.config/nvim/table.vim
 
-" =========
-" Functions
-" =========
-
-" ChangeDirectoryToWikiRoot (bufnr)
-"   sets the current working directory to the root directory for the wiki for
-"   the specified buffer
-function! ChangeDirectoryToWikiRoot(bufnr)
-  let wiki_nr = getbufvar(a:bufnr, "vimwiki_wiki_nr", -1)
-  if wiki_nr == -1
-    return
-  endif
-
-  let wiki_path =  vimwiki#vars#get_wikilocal('path', wiki_nr)
-  execute "lchdir" wiki_path
-endfunction
-
-" SetMakeBuildDir(dir)
-"   set the build directory for :make
-function! SetMakeBuildDir(dir)
-  if (!isdirectory(a:dir))
-    echo a:dir . " is not a directory"
-    return -1
-  endif
-
-  let &makeprg = "ninja -C " . a:dir
-endfunction
-
-" ResetMakeBuildDir()
-"   reset the build directory for :make
-function! ResetMakeBuildDir()
-  let dir = "./build"
-  if (!isdirectory(dir))
-    let dir = "."
-  endif
-
-  let &makeprg = "ninja -C " . dir
-endfunction
-
-" s:toggle_quickfix_list()
-"   toggle visibility of quickfix list window
-function! s:toggle_quickfix_list()
-  let windows = getwininfo()
-  for window in windows
-    if window.quickfix == 1
-      cclose
-      return
-    endif
-  endfor
-
-  copen
-endfunction
-
-" PromptQuickfix()
-"   shows quickfix window if there are errors in the current list
-function! PromptQuickfix()
-  let qflist = getqflist()
-  for item in qflist
-    if item.lnum > 0
-      copen
-      return
-    endif
-  endfor
-
-  cclose
-endfunction
-
-" WikiDate()
-"   return formatted date
-function! WikiDate()
-  return strftime('%B %e, %Y')
-endfunction
-
-" Qdate()
-"   return formatted date
-function! Qdate()
-  return strftime('%Y-%m-%d')
-endfunction
-
-" s:config_vimwiki_mappings()
-" set key mappings for vimwiki
+" ===================
+" Remapping Functions
+" ===================
 function! s:config_vimwiki_mappings()
   " Remap Ctrl-T to increase list indent for vimwiki
   imap <buffer> <C-T> <Plug>VimwikiIncreaseLvlSingleItem
@@ -108,15 +33,12 @@ function! s:config_vimwiki_mappings()
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
 endfunction
 
-" s:config_cpp_mappings()
-"   set mappings for cpp files
 function! s:config_cpp_mappings()
   " remap gd to search for word under cursor in source files in directory
   nnoremap <silent> <buffer> gd <CMD>vim/\<<C-R><C-W>\>/gj **/*.h **/*.cpp<BAR>copen<CR>
   vnoremap <silent> <buffer> gd y<CMD>vim/\<<C-R>"\>/gj **/*.h **/*.cpp<BAR>copen<CR>
 endfunction
 
-" s:config_netrw_mappings
 function! s:config_netrw_mappings()
   " P to close preview window
   nnoremap <silent> <buffer> P <CMD>pclose<CR>
@@ -126,6 +48,164 @@ function! s:config_netrw_mappings()
   "nnoremap <buffer> <C-Q> <C-^>
 endfunction
 
+function s:config_table_mappings()
+  " \tt to format table
+  nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
+
+  " \ti to start table insert
+  nnoremap <silent> <Leader>ti <CMD>StartTableInsert<CR>
+
+  " \tc to select current paragraph-cell
+  nnoremap <silent> <Leader>tc <CMD>SelectCursorParaCell<CR>
+  vnoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
+  onoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
+
+  " \tC to select current column
+  nnoremap <silent> <Leader>tC <CMD>SelectTableColumn<CR>
+  vnoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
+  onoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
+
+  " \tR to select current paragraph-row
+  nnoremap <silent> <Leader>tR <CMD>SelectTableParaRow<CR>
+  vnoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
+  onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
+
+  " disable | (bar) moving to beginning of line
+  nnoremap <silent> <Bar> <CMD><CR>
+  " |h (bar) to goto the left paragraph-cell
+  nnoremap <silent> <Bar>h <CMD>call GotoRelParaCell(0, -1)<CR>
+  " |j (bar) to goto the below paragraph-cell
+  nnoremap <silent> <Bar>j <CMD>call GotoRelParaCell(1, 0)<CR>
+  " |k (bar) to goto the above paragraph-cell
+  nnoremap <silent> <Bar>k <CMD>call GotoRelParaCell(-1, 0)<CR>
+  " |l (bar) to goto the right paragraph-cell
+  nnoremap <silent> <Bar>l <CMD>call GotoRelParaCell(0, 1)<CR>
+  " || (bar) to goto the right paragraph-cell
+  nnoremap <silent> <Bar><Bar> <CMD>call GotoRelParaCell(0, 0)<CR>
+endfunction
+
+function! s:config_telescope_mappings()
+  " \e to pick a buffer
+  nnoremap <silent> <Leader>e <CMD>Telescope buffers<CR>
+  " \ee to pick a buffer
+  nnoremap <silent> <Leader>ee <CMD>Telescope buffers<CR>
+  " \er to grep
+  nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
+  " \et to pick a tag
+  nnoremap <silent> <Leader>et <CMD>Telescope tags<CR>
+  " \ep to list all builtin pickers
+  nnoremap <silent> <Leader>ep <CMD>Telescope builtin<CR>
+  " \ef to pick files
+  nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
+  " \ec to pick a command from command history
+  nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
+  " \em to pick a mark
+  nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
+endfunction
+
+function! s:config_leader_mappings()
+  " \s to toggle spell check
+  nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
+  " \h to toggle highlighted search
+  nnoremap <silent> <Leader>h <CMD>set hlsearch!<cr>
+  " \l to toggle colour line
+  nnoremap <silent> <Leader>l <CMD>setl cul!<CR>
+  " \L to toggle visible whitespace
+  nnoremap <silent> <Leader>L <CMD>setl list!<CR>
+  " \z to toggle goyo mode
+  nnoremap <silent> <Leader>z <CMD>Goyo<cr>
+  " \n to toggle line numbers
+  nnoremap <silent> <Leader>n <CMD>setl nu! rnu!<CR>
+  " \g to open fugitive buffer
+  nnoremap <silent> <expr> <Leader>g exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
+endfunction
+
+function! s:config_windowing_mappings()
+  " Alt + key bindings
+  nnoremap <M-q> <C-W>q
+  nnoremap <M-w> <C-W>w
+  nnoremap <M-o> <C-W>o
+  nnoremap <M-p> <C-W>p
+  nnoremap <M-s> <C-W>s
+  nnoremap <M-h> <C-W>h
+  nnoremap <M-j> <C-W>j
+  nnoremap <M-k> <C-W>k
+  nnoremap <M-l> <C-W>l
+  nnoremap <M-v> <C-W>v
+
+  " Alt + t to split window to new tab
+  nnoremap <M-t> <C-W>s<C-W>T
+
+  " Alt + number key bindings to go to window
+  nnoremap <M-1> 1<C-W>w
+  nnoremap <M-2> 2<C-W>w
+  nnoremap <M-3> 3<C-W>w
+  nnoremap <M-4> 4<C-W>w
+  nnoremap <M-5> 5<C-W>w
+  nnoremap <M-6> 6<C-W>w
+  nnoremap <M-7> 7<C-W>w
+  nnoremap <M-8> 8<C-W>w
+  nnoremap <M-9> 9<C-W>w
+
+  " Alt + - to 'zoom' current window (Ctr-W _)
+  nnoremap <M--> <C-W>_<C-W><bar>
+
+  " Alt + = to 'equalise' windows
+  nnoremap <M-=> <C-W>=
+endfunction
+
+function! s:config_bracket_swapping_mappings()
+  nnoremap <silent> <Leader>r( m'%r)`'r(
+  nnoremap <silent> <Leader>r) m'%r)`'r(
+  nnoremap <silent> <Leader>r[ m'%r]`'r[
+  nnoremap <silent> <Leader>r] m'%r]`'r[
+  nnoremap <silent> <Leader>r{ m'%r}`'r{
+  nnoremap <silent> <Leader>r} m'%r}`'r{
+endfunction
+
+" ================
+" General Mappings
+" ================
+
+" Convenience mappings
+" Ctrl-S to save the current file
+nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
+" Ctrl-S in insert mode to save the current file without leaving insert mode
+imap <C-S> <C-O><C-S>
+
+" Load view and make view set to F5 and Shift+F5 respectively
+nnoremap <F5> <CMD>call SafeLoadView()<CR>
+nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
+
+" Ctrl-Backspace to Ctrl-W in Insert and Command mode
+imap <C-H> <C-W>
+cmap <C-H> <C-W>
+
+" Q to format paragraph (similar to vim)
+nnoremap Q <CMD>FormatParagraph<CR>
+
+" J to join lines without jumping (sets last mark)
+nnoremap J m'J`'
+
+call s:config_bracket_swapping_mappings()
+call s:config_windowing_mappings()
+call s:config_leader_mappings()
+call s:config_telescope_mappings()
+call s:config_table_mappings()
+
+" filetype mappings
+augroup chrys_ft_mappings
+  autocmd!
+  autocmd FileType vimwiki call s:config_vimwiki_mappings()
+  autocmd FileType cpp call s:config_cpp_mappings()
+  " <C-J> in insert mode in python files refreshes coc
+  autocmd FileType python inoremap <silent> <C-J> <CMD>call coc#refresh()<CR>
+  autocmd FileType netrw call s:config_netrw_mappings()
+augroup END
+
+" =================
+" Tabline Functions
+" =================
 " s:highlight_modified
 function! s:highlight_modified(tabline)
   if &modified
@@ -380,6 +460,73 @@ function! GoyoTabline()
   return tabline
 endfunction
 
+" =========
+" Functions
+" =========
+
+" s:change_directory_to_vimwiki_root(bufnr)
+"   sets the current working directory to the root directory for the wiki for
+"   the specified buffer
+function! s:change_directory_to_vimwiki_root(bufnr)
+  let wiki_nr = getbufvar(a:bufnr, "vimwiki_wiki_nr", -1)
+  if wiki_nr == -1
+    return
+  endif
+
+  let wiki_path =  vimwiki#vars#get_wikilocal('path', wiki_nr)
+  execute "lchdir" wiki_path
+endfunction
+
+" SetMakeBuildDir(dir)
+"   set the build directory for :make
+function! SetMakeBuildDir(dir)
+  if (!isdirectory(a:dir))
+    echo a:dir . " is not a directory"
+    return -1
+  endif
+
+  let &makeprg = "ninja -C " . a:dir
+endfunction
+
+" ResetMakeBuildDir()
+"   reset the build directory for :make
+function! ResetMakeBuildDir()
+  let dir = "./build"
+  if (!isdirectory(dir))
+    let dir = "."
+  endif
+
+  let &makeprg = "ninja -C " . dir
+endfunction
+
+" PromptQuickfix()
+"   shows quickfix window if there are errors in the current list
+function! PromptQuickfix()
+  let qflist = getqflist()
+  for item in qflist
+    if item.lnum > 0
+      copen
+      return
+    endif
+  endfor
+
+  cclose
+endfunction
+
+" WikiDate()
+"   return formatted date
+function! WikiDate()
+  return strftime('%B %e, %Y')
+endfunction
+
+" Qdate()
+"   return formatted date
+function! Qdate()
+  return strftime('%Y-%m-%d')
+endfunction
+
+" SaveCurrentModifiedFile()
+"   save the current file if it has been modified
 function! SaveCurrentModifiedFile()
   if &modified
     write
@@ -457,10 +604,6 @@ command! FormatTable call FormatTable()
 "   copy current working directory to clipboard
 command! CopyCWDToClipboard call setreg("*", getcwd())
 
-" ToggleQuickfixList
-"   toggle visibility of quickfix list window
-command! ToggleQuickfixList call s:toggle_quickfix_list()
-
 " Qdate
 "   echo quick date/set to register
 command! -register Qdate
@@ -482,13 +625,9 @@ command! -register ClearReg
       \   call setreg('<reg>','') |
       \ endif
 
-" TODO: move into vimwiki autocmd group
-" Vcd
-"   change directory to wiki root
-command! Vcd call ChangeDirectoryToWikiRoot(bufnr())
-
 " ClipHTMLToMarkdown
 " ClipMarkdownToHTML
+"   TODO more testing required (usage may have broken)
 "   commands for converting clipboard buffer to/from markdown
 "   (for now this is linux only)
 command! ClipHTMLToMarkdown !~/scripts/clip_html_to_markdown.sh
@@ -534,192 +673,44 @@ set wildignore+=*.bak
 set nocompatible
 set hidden
 
-" ==========
-" Remappings
-" ==========
-
-" Convenience mappings
-" Ctrl-S to save the current file
-nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
-" Ctrl-S in insert mode to save the current file without leaving insert mode
-imap <C-S> <C-O><C-S>
-
-" Load view and make view set to F5 and Shift+F5 respectively
-nnoremap <F5> <CMD>call SafeLoadView()<CR>
-nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
-
-" Ctrl-Backspace to Ctrl-W in Insert and Command mode
-imap <C-H> <C-W>
-cmap <C-H> <C-W>
-
-" Q to format paragraph (similar to vim)
-nnoremap Q <CMD>FormatParagraph<CR>
-
-" J to join lines without jumping (sets last mark)
-nnoremap J m'J`'
-
-" Bracket swapping
-nnoremap <silent> <Leader>r( m'%r)`'r(
-nnoremap <silent> <Leader>r) m'%r)`'r(
-nnoremap <silent> <Leader>r[ m'%r]`'r[
-nnoremap <silent> <Leader>r] m'%r]`'r[
-nnoremap <silent> <Leader>r{ m'%r}`'r{
-nnoremap <silent> <Leader>r} m'%r}`'r{
-
-" Alt + key bindings
-nnoremap <M-q> <C-W>q
-nnoremap <M-w> <C-W>w
-nnoremap <M-o> <C-W>o
-nnoremap <M-p> <C-W>p
-nnoremap <M-s> <C-W>s
-nnoremap <M-h> <C-W>h
-nnoremap <M-j> <C-W>j
-nnoremap <M-k> <C-W>k
-nnoremap <M-l> <C-W>l
-nnoremap <M-v> <C-W>v
-
-" Alt + t to split window to new tab
-nnoremap <M-t> <C-W>s<C-W>T
-
-" Alt + g to open git view
-nnoremap <M-g> <CMD>Git<CR>
-
-" Alt + number key bindings to go to window
-nnoremap <M-1> 1<C-W>w
-nnoremap <M-2> 2<C-W>w
-nnoremap <M-3> 3<C-W>w
-nnoremap <M-4> 4<C-W>w
-nnoremap <M-5> 5<C-W>w
-nnoremap <M-6> 6<C-W>w
-nnoremap <M-7> 7<C-W>w
-nnoremap <M-8> 8<C-W>w
-nnoremap <M-9> 9<C-W>w
-
-" Alt + - to 'zoom' current window (Ctr-W _)
-nnoremap <M--> <C-W>_<C-W><bar>
-
-" Alt + = to 'equalise' windows
-nnoremap <M-=> <C-W>=
-
-" Leader toggle mappings
-" \s to toggle spell check
-nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
-" \h to toggle highlighted search
-nnoremap <silent> <Leader>h <CMD>set hlsearch!<cr>
-" \l to toggle colour line
-nnoremap <silent> <Leader>l <CMD>setl cul!<CR>
-" \L to toggle visible whitespace
-nnoremap <silent> <Leader>L <CMD>setl list!<CR>
-" \z to toggle goyo mode
-nnoremap <silent> <Leader>z <CMD>Goyo<cr>
-" \c to close quickfix list
-nnoremap <silent> <Leader>c <CMD>cclose<CR>
-" \m to toggle quickfix
-nnoremap <silent> <Leader>m <CMD>ToggleQuickfixList<CR>
-" \n to toggle line numbers
-nnoremap <silent> <Leader>n <CMD>setl nu! rnu!<CR>
-
-" Preivew window mappings
-" \pp to close quickfix list
-nnoremap <silent> <Leader>pp <CMD>pclose<cr>
-" \pl to close locations list
-nnoremap <silent> <Leader>pl <CMD>lclose<cr>
-
-" \g to open fugitive buffer
-nnoremap <silent> <Leader>g <CMD>Git<cr>
-
-" Telescope mappings
-" \e to pick a buffer
-nnoremap <silent> <Leader>e <CMD>Telescope buffers<CR>
-" \ee to pick a buffer
-nnoremap <silent> <Leader>ee <CMD>Telescope buffers<CR>
-" \er to grep
-nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
-" \et to pick a tag
-nnoremap <silent> <Leader>et <CMD>Telescope tags<CR>
-" \ep to list all builtin pickers
-nnoremap <silent> <Leader>ep <CMD>Telescope builtin<CR>
-" \ef to pick files
-nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
-" \ec to pick a command from command history
-nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
-" \em to pick a mark
-nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
-
-" \tt to format table
-nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
-
-" \ti to start table insert
-nnoremap <silent> <Leader>ti <CMD>StartTableInsert<CR>
-
-" \tc to select current paragraph-cell
-nnoremap <silent> <Leader>tc <CMD>SelectCursorParaCell<CR>
-vnoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
-onoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
-
-" \tC to select current column
-nnoremap <silent> <Leader>tC <CMD>SelectTableColumn<CR>
-vnoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
-onoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
-
-" \tR to select current paragraph-row
-nnoremap <silent> <Leader>tR <CMD>SelectTableParaRow<CR>
-vnoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
-onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
-
-" disable | (bar) moving to beginning of line
-nnoremap <silent> <Bar> <CMD><CR>
-" |h (bar) to goto the left paragraph-cell
-nnoremap <silent> <Bar>h <CMD>call GotoRelParaCell(0, -1)<CR>
-" |j (bar) to goto the below paragraph-cell
-nnoremap <silent> <Bar>j <CMD>call GotoRelParaCell(1, 0)<CR>
-" |k (bar) to goto the above paragraph-cell
-nnoremap <silent> <Bar>k <CMD>call GotoRelParaCell(-1, 0)<CR>
-" |l (bar) to goto the right paragraph-cell
-nnoremap <silent> <Bar>l <CMD>call GotoRelParaCell(0, 1)<CR>
-" || (bar) to goto the right paragraph-cell
-nnoremap <silent> <Bar><Bar> <CMD>call GotoRelParaCell(0, 0)<CR>
-
-" filetype mappings
-augroup chrys_map
-  autocmd!
-  autocmd FileType vimwiki call s:config_vimwiki_mappings()
-  autocmd FileType cpp call s:config_cpp_mappings()
-  " TODO: move?
-  autocmd FileType python inoremap <silent><expr> <C-J> coc#refresh()
-  autocmd FileType netrw call s:config_netrw_mappings()
-augroup END
-
 " =====================
 " General Configuration
 " =====================
 
-" filetype specific configuration
-"   TODO: split?
-"   disable line numbers in vimwiki
-"   set textwidth and wrapping settings for markdown and vimwiki
-"   disable suggestions for vimwiki
-"   fix key mapping conflict with vimwiki and pear-tree
-"   add command for link tag hierarchy
-"   set conceallevel for markdown
-augroup chrys_filetype
-  autocmd!
-  autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
-  autocmd FileType markdown setlocal nonumber norelativenumber textwidth=80 conceallevel=2
-  autocmd FileType vimwiki let b:coc_suggest_disable = 1
-  autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
-  autocmd FileType markdown let b:coc_suggest_disable = 1
-  autocmd FileType vimwiki command! -buffer -nargs=1 -complete=custom,vimwiki#tags#complete_tags
-        \ ChryswikiGenerateTagLinks call call("vimwiki#tags#generate_tags", extend([1], vimwiki#tags#get_tags()->filter('v:val =~ "'..<f-args>..'"')))
-augroup END
-
 " set configuration for :make
 call ResetMakeBuildDir()
+
+" use Qdate to set d register to today's date silently
+silent Qdate d
 
 " open quickfix window if :make yields errors
 augroup chrys_quickfix
   autocmd!
   autocmd QuickfixCmdPost make call PromptQuickfix()
+augroup END
+
+" disable line numbers in vimwiki
+" set textwidth for vimwiki
+" disable suggestions for vimwiki
+" fix key mapping conflict with vimwiki and pear-tree
+" add command for link tag hierarchy TODO underused, maybe remove
+augroup chrys_ft_vimwiki
+  autocmd!
+  autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
+  autocmd FileType vimwiki let b:coc_suggest_disable = 1
+  autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
+  autocmd FileType vimwiki command! -buffer -nargs=1 -complete=custom,vimwiki#tags#complete_tags
+        \ ChryswikiGenerateTagLinks call call("vimwiki#tags#generate_tags", extend([1], vimwiki#tags#get_tags()->filter('v:val =~ "'..<f-args>..'"')))
+  autocmd FileType vimwiki command! Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
+augroup END
+
+" set textwidth for markdown
+" disable suggestions for markdown
+" set conceallevel for markdown
+augroup chrys_ft_markdown
+  autocmd!
+  autocmd FileType markdown setlocal nonumber norelativenumber textwidth=80 conceallevel=2
+  autocmd FileType markdown let b:coc_suggest_disable = 1
 augroup END
 
 " =======
@@ -763,7 +754,9 @@ function! ChrysAirlineInit()
   let g:airline_section_x = airline#section#create(['%{TablineFlagsAndSymbols()}']) .. g:airline_section_x
 endfunction
 
-autocmd User AirlineAfterInit call ChrysAirlineInit()
+augroup chrys_airline_init
+  autocmd User AirlineAfterInit call ChrysAirlineInit()
+augroup END
 
 " vimwiki customisation
 let g:vimwiki_global_ext = 0
@@ -853,16 +846,9 @@ autocmd ColorScheme onedark call <SID>configure_onedark()
 
 " goyo configuration
 let g:goyo_width = 85
-let g:chrys_goyo_quiet_mode = 0
-
-command! GoyoQuietMode let g:chrys_goyo_quiet_mode = !g:chrys_goyo_quiet_mode
 
 " configure display during goyo
 function! s:goyo_enter()
-  if !empty(g:chrys_goyo_quiet_mode)
-    return
-  endif
-
   set showtabline=2
   set tabline=%!GoyoTabline()
 endfunction
@@ -878,7 +864,4 @@ autocmd! User GoyoLeave nested call <SID>goyo_leave()
 " Colorscheme and Highlighting
 set termguicolors
 colorscheme onedark
-
-" use Qdate to set d register to today's date silently
-silent Qdate d
 

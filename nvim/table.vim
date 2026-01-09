@@ -308,9 +308,9 @@ endfunction
 "   selection should be a list of four numbers
 function! s:use_selection(selection) abort
   let [linenr_first, colnr_first, linenr_last, colnr_last] = a:selection
-  call setpos('.', [0, linenr_last, colnr_last, 0])
+  call setcharpos('.', [0, linenr_last, colnr_last, 0, colnr_last])
   execute "normal! \<C-V>"
-  call setpos('.', [0, linenr_first, colnr_first, 0])
+  call setcharpos('.', [0, linenr_first, colnr_first, 0, colnr_first])
 endfunction
 
 " SelectCursorParaCell()
@@ -560,15 +560,14 @@ function! StartTableInsert()
   endif
 
   let [linenr, colnr, _, _] = selection
-  call setpos('.', [0, linenr, colnr, 0])
+  call setcharpos('.', [0, linenr, colnr, 0, colnr])
   startreplace
 endfunction
 
-" IncrementTableRowColumn(table_info, row, column)
-"   TODO: development
-"   return next row,column index pair in the table
+" s:increment_table_row_column(table_info, row, column, row_off, col_off)
+"   return next row,column index pair in the table by row and col offsets
 "   return [-1,-1] if there is no next paragraph cell
-function! IncrementTableRowColumn(table_info, row, column)
+function! s:increment_table_row_column(table_info, row, column, row_off, col_off)
   if assert_true(a:row >= 0, "row out-of-bounds")
     return [-1, -1]
   elseif assert_true(a:column >= 0, "col out-of-bounds")
@@ -584,9 +583,9 @@ function! IncrementTableRowColumn(table_info, row, column)
   endfor
 
   let column_count = len(a:table_info.cols)
-  let next_cell_index = a:row * column_count + a:column + 1
+  let next_cell_index = (a:row + a:row_off) * column_count + (a:column + a:col_off)
   let max_cell_index = len(row_heights) * column_count
-  while next_cell_index < max_cell_index
+  while next_cell_index < max_cell_index && next_cell_index >= 0
     if cell_areas[next_cell_index] == 0
       let next_cell_index = next_cell_index + 1
       continue
@@ -596,5 +595,31 @@ function! IncrementTableRowColumn(table_info, row, column)
   endwhile
 
   return [-1, -1]
+endfunction
+
+" GotoRelParaCell(row_off, col_off)
+"   move cursor to beginning of the paragraph cell by the row and column
+"   offsets, if one exists, otherwise do nothing
+function! GotoRelParaCell(row_off, col_off)
+  let [_, linenr, columnnr, _] = getpos('.')
+  let table_info = s:get_table_info(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  let row = s:get_cursor_table_pararow(table_info, linenr)
+  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
+  let [next_row, next_col] = s:increment_table_row_column(table_info, row, col, a:row_off, a:col_off)
+  if next_row == -1 || next_col == -1
+    return
+  endif
+
+  let selection = s:get_paracell_selection(table_info, next_row, next_col)
+  if empty(selection)
+    return
+  endif
+
+  let [linenr, colnr, _, _] = selection
+  call setcharpos('.', [0, linenr, colnr, 0, colnr])
 endfunction
 

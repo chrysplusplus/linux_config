@@ -667,6 +667,19 @@ nnoremap <silent> <Leader>tR <CMD>SelectTableParaRow<CR>
 vnoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
 onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
 
+" disable | (bar) moving to beginning of line
+nnoremap <silent> <Bar> <CMD><CR>
+" |h (bar) to goto the left paragraph-cell
+nnoremap <silent> <Bar>h <CMD>call GotoRelParaCell(0, -1)<CR>
+" |j (bar) to goto the below paragraph-cell
+nnoremap <silent> <Bar>j <CMD>call GotoRelParaCell(1, 0)<CR>
+" |k (bar) to goto the above paragraph-cell
+nnoremap <silent> <Bar>k <CMD>call GotoRelParaCell(-1, 0)<CR>
+" |l (bar) to goto the right paragraph-cell
+nnoremap <silent> <Bar>l <CMD>call GotoRelParaCell(0, 1)<CR>
+" || (bar) to goto the right paragraph-cell
+nnoremap <silent> <Bar><Bar> <CMD>call GotoRelParaCell(0, 0)<CR>
+
 " filetype mappings
 augroup chrys_map
   autocmd!

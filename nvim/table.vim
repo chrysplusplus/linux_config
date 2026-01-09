@@ -1,7 +1,5 @@
 " File: table.vim
-"
 " Author: chrysplusplus
-"
 " Description: Inspired by tables in vimwiki but adapted to my own specialist
 " use, see below. Table rows (known internally as paragraph-rows) are
 " separated; any lines that aren't separated are considered part of the same
@@ -19,10 +17,10 @@
 " See https://github.com/vimwiki/vimwiki for original inspiration
 
 " regex patterns used for tables
-let g:table_pattern = '^|.*|$'
-let g:table_sep_pattern = '^|\(-*|\)\+$'
+let s:table_pattern = '^|.*|$'
+let s:table_sep_pattern = '^|\(-*|\)\+$'
 
-" GetTableInfo(bufnr, linenr)
+" s:get_table_info(bufnr, linenr)
 "   return table information around a line in a buffer
 "   table information contains:
 "     bufnr: the buffer containing the table
@@ -30,13 +28,13 @@ let g:table_sep_pattern = '^|\(-*|\)\+$'
 "     last_linenr: last line of the table
 "     first_row_separator_linenr: line containing first row separator
 "     cols: list of column widths, assuming table is correctly formatted
-function! GetTableInfo(bufnr, linenr)
+function! s:get_table_info(bufnr, linenr)
   let lines = getbufline(a:bufnr, 1, '$')
   let current_line = lines[a:linenr - 1]
 
-  let LineIndexInTable = {index -> match(lines[index], g:table_pattern) == 0}
+  let LineIndexInTable = {index -> match(lines[index], s:table_pattern) == 0}
 
-  if match(current_line, g:table_pattern) == -1
+  if match(current_line, s:table_pattern) == -1
     return {}
   endif
 
@@ -64,7 +62,7 @@ function! GetTableInfo(bufnr, linenr)
     let last_index = len(lines) - 1
   endif
 
-  let LineIndexIsRowSeparator = {index -> match(lines[index], g:table_sep_pattern) == 0}
+  let LineIndexIsRowSeparator = {index -> match(lines[index], s:table_sep_pattern) == 0}
 
   let first_row_separator_index = -1
   for index in range(first_index, last_index)
@@ -89,11 +87,11 @@ function! GetTableInfo(bufnr, linenr)
   return table_info
 endfunction
 
-" GetTableParaRowHeights(table_info)
+" s:get_table_pararow_heights(table_info)
 "   return list of heights of paragraph-rows in a table
-function! GetTableParaRowHeights(table_info)
+function! s:get_table_pararow_heights(table_info)
   let lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
-  let row_boundaries = copy(lines)->map({idx,line -> match(line, g:table_sep_pattern) == 0 ? idx : -1})->filter({_,v -> v != -1})
+  let row_boundaries = copy(lines)->map({idx,line -> match(line, s:table_sep_pattern) == 0 ? idx : -1})->filter({_,v -> v != -1})
   call insert(row_boundaries, -1, 0)
   call add(row_boundaries, len(lines))
 
@@ -108,9 +106,9 @@ function! GetTableParaRowHeights(table_info)
   return heights
 endfunction
 
-" GetCursorTableColumn(table_info, linenr, columnnr)
+" s:get_cursor_table_column(table_info, linenr, columnnr)
 "   return column index of cursor in a table
-function! GetCursorTableColumn(table_info, linenr, columnnr)
+function! s:get_cursor_table_column(table_info, linenr, columnnr)
   if empty(a:table_info)
     return -1
   endif
@@ -131,9 +129,9 @@ function! GetCursorTableColumn(table_info, linenr, columnnr)
   return max_column_index
 endfunction
 
-" GetCursorTableParaRow(cursor)
+" s:get_cursor_table_pararow(cursor)
 "   return paragraph-row index of cursor in a table
-function! GetCursorTableParaRow(table_info, linenr)
+function! s:get_cursor_table_pararow(table_info, linenr)
   if empty(a:table_info)
     return -1
   endif
@@ -144,7 +142,7 @@ function! GetCursorTableParaRow(table_info, linenr)
   let separator_line_count = 0
   while index <= max_index
     let current_line = table_lines[index]
-    if match(current_line, g:table_sep_pattern) == 0
+    if match(current_line, s:table_sep_pattern) == 0
       let separator_line_count = separator_line_count + 1
     endif
 
@@ -154,10 +152,10 @@ function! GetCursorTableParaRow(table_info, linenr)
   return separator_line_count
 endfunction
 
-" GetTableColumnBounds(table_info, column_index)
+" s:get_table_column_bounds(table_info, column_index)
 "   return the start and end of the text boundary for a column of a table
 "   return [-1,-1] if column has no text boundary
-function! GetTableColumnBounds(table_info, column_index)
+function! s:get_table_column_bounds(table_info, column_index)
   if assert_true(a:column_index < len(a:table_info.cols), 'column index out-of-bounds')
     return [-1,-1]
   endif
@@ -186,12 +184,12 @@ endfunction
 " not for exported use
 " TODO maybe remove and replace usage with row heights
 " so the same algorithm can be used for columns and rows
-function! GetTableRowSeparators(lines, first_linenr)
+function! s:get_table_row_separators(lines, first_linenr)
   let separator_linenrs = []
   let index = 0
   let max_index = len(a:lines) - 1
   while index <= max_index
-    if match(a:lines[index], g:table_sep_pattern) == 0
+    if match(a:lines[index], s:table_sep_pattern) == 0
       call add(separator_linenrs, a:first_linenr + index)
     endif
     let index = index + 1
@@ -200,7 +198,7 @@ function! GetTableRowSeparators(lines, first_linenr)
   return separator_linenrs
 endfunction
 
-" GetTableParaRowInfo(table_info, para_index)
+" s:get_table_pararow_info(table_info, para_index)
 "   return information for a paragraph-cell text boundary of a table
 "   information Dictionary contains:
 "     before_sep_linenr: line number for the previous row separator, or -1
@@ -208,9 +206,9 @@ endfunction
 "     text_start_linenr: line number for the text start, or -1
 "     text_end_linenr:   line number for the text end, or -1
 "   return empty Dictionary if para_index is out of bounds
-function! GetTableParaRowInfo(table_info, para_index)
+function! s:get_table_pararow_info(table_info, para_index)
   let table_lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
-  let separator_linenrs = GetTableRowSeparators(table_lines, a:table_info.first_linenr)
+  let separator_linenrs = s:get_table_row_separators(table_lines, a:table_info.first_linenr)
 
   if a:para_index < 0
     return {}
@@ -278,12 +276,12 @@ function! GetTableParaRowInfo(table_info, para_index)
   return info
 endfunction
 
-" GetParaCellSelection(table_info, row, col)
+" s:get_paracell_selection(table_info, row, col)
 "   return [start_linenr, start_colnr, end_linenr, end_colnr]
 "   return empty list for invalid selections
 "   not for exported use
-function! GetParaCellSelection(table_info, row, col)
-  let row_heights = GetTableParaRowHeights(a:table_info)
+function! s:get_paracell_selection(table_info, row, col)
+  let row_heights = s:get_table_pararow_heights(a:table_info)
   if assert_true(a:row >= 0 && a:row < len(row_heights), "row out-of-bounds")
     return []
   elseif assert_true(a:col >= 0 && a:col < len(a:table_info.cols), "col out-of-bounds")
@@ -292,12 +290,12 @@ function! GetParaCellSelection(table_info, row, col)
 
   let ExtractParaInfoStartEnd = {info -> [info.text_start_linenr, info.text_end_linenr]}
 
-  let [colnr_first, colnr_last] = GetTableColumnBounds(a:table_info, a:col)
+  let [colnr_first, colnr_last] = s:get_table_column_bounds(a:table_info, a:col)
   if colnr_first == -1
     return []
   endif
 
-  let [linenr_first, linenr_last] = ExtractParaInfoStartEnd(GetTableParaRowInfo(a:table_info, a:row))
+  let [linenr_first, linenr_last] = ExtractParaInfoStartEnd(s:get_table_pararow_info(a:table_info, a:row))
   if linenr_first == -1
     return []
   endif
@@ -305,10 +303,10 @@ function! GetParaCellSelection(table_info, row, col)
   return [linenr_first, colnr_first, linenr_last, colnr_last]
 endfunction
 
-" UseSelection(selection)
+" s:use_selection(selection)
 "   enter visual block mode to selection
 "   selection should be a list of four numbers
-function! UseSelection(selection) abort
+function! s:use_selection(selection) abort
   let [linenr_first, colnr_first, linenr_last, colnr_last] = a:selection
   call setpos('.', [0, linenr_last, colnr_last, 0])
   execute "normal! \<C-V>"
@@ -319,16 +317,16 @@ endfunction
 "   select the paragraph-cell in the table containing the cursor
 function! SelectCursorParaCell()
   let [_, linenr, columnnr, _] = getpos('.')
-  let table_info = GetTableInfo(bufnr(), linenr)
+  let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
   endif
 
-  let col = GetCursorTableColumn(table_info, linenr, columnnr)
-  let row = GetCursorTableParaRow(table_info, linenr)
-  let selection = GetParaCellSelection(table_info, row, col)
+  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
+  let row = s:get_cursor_table_pararow(table_info, linenr)
+  let selection = s:get_paracell_selection(table_info, row, col)
   if !empty(selection)
-    call UseSelection(selection)
+    call s:use_selection(selection)
   endif
 endfunction
 
@@ -337,31 +335,31 @@ endfunction
 "   column separator
 function! SelectTableColumn()
   let [_, linenr, columnnr, _] = getpos('.')
-  let table_info = GetTableInfo(bufnr(), linenr)
+  let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
   endif
 
-  let column_index = GetCursorTableColumn(table_info, linenr, columnnr)
-  let [colnr_first, colnr_last] = GetTableColumnBounds(table_info, column_index)
+  let column_index = s:get_cursor_table_column(table_info, linenr, columnnr)
+  let [colnr_first, colnr_last] = s:get_table_column_bounds(table_info, column_index)
   if colnr_first == -1
     return
   endif
 
-  call UseSelection([table_info.first_linenr, colnr_first, table_info.last_linenr, colnr_last])
+  call s:use_selection([table_info.first_linenr, colnr_first, table_info.last_linenr, colnr_last])
 endfunction
 
 " SelectTableParaRow()
 "   select the paragraph-row of the table containing the cursor
 function! SelectTableParaRow()
   let [_, linenr, columnnr, _] = getpos('.')
-  let table_info = GetTableInfo(bufnr(), linenr)
+  let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
   endif
 
-  let row = GetCursorTableParaRow(table_info, linenr)
-  let row_info = GetTableParaRowInfo(table_info, row)
+  let row = s:get_cursor_table_pararow(table_info, linenr)
+  let row_info = s:get_table_pararow_info(table_info, row)
   if row_info.text_start_linenr == -1
     return
   endif
@@ -369,12 +367,13 @@ function! SelectTableParaRow()
   let linenr_first = row_info.text_start_linenr
   let linenr_last = row_info.text_end_linenr
   let table_width = len(getbufoneline(table_info.bufnr, linenr_first))
-  call UseSelection([linenr_first, 1, linenr_last, table_width])
+  call s:use_selection([linenr_first, 1, linenr_last, table_width])
 endfunction
 
-" ListSlice(l, first, last)
+" s:list_slice(l, first, last)
+"   TODO change to use internal vim function
 "   return a copy of l containg the elements between first and last
-function! ListSlice(l, first, last)
+function! s:list_slice(l, first, last)
   let result = []
   for index in range(a:first, a:last)
     call add(result, a:l[index])
@@ -382,11 +381,11 @@ function! ListSlice(l, first, last)
   return result
 endfunction
 
-" TransposeAndJoin(list_of_lists, sublist_len)
+" s:transpose(list_of_lists, sublist_len, default)
 "   return transposed list of lists, sublist_len is a number that specifies
 "   the maximum length of a sublist, default is the default value if index is
 "   not found
-function! Transpose(list_of_lists, sublist_len, default)
+function! s:transpose(list_of_lists, sublist_len, default)
   if empty(a:list_of_lists)
     return a:list_of_lists
   endif
@@ -402,11 +401,11 @@ function! Transpose(list_of_lists, sublist_len, default)
   return transposed
 endfunction
 
-" WrapText(lines, width)
+" s:wrap_text(lines, width)
 "   return list of lines of paragraph lines wrapped to width
 "   any blank lines are interpreted as paragraph breaks, and so persist after
 "   wrapping
-function! WrapText(lines, width)
+function! s:wrap_text(lines, width)
   let paragraphs = []
   let current_paragraph = ''
   for line in a:lines
@@ -467,9 +466,9 @@ function! WrapText(lines, width)
   return lines
 endfunction
 
-" MakeTableRowSeparatorAndFormatString(cols)
+" s:make_table_row_separators_and_format_string(cols)
 "   return row_separator and format string
-function! MakeTableRowSeparatorAndFormatString(cols)
+function! s:make_table_row_separators_and_format_string(cols)
   let row_separator = '|'
   let row_format_string = '|'
   for column_width in a:cols
@@ -484,7 +483,7 @@ endfunction
 "   the first row separator
 function! FormatTable()
   let [_, linenr, columnnr, _] = getpos('.')
-  let table_info = GetTableInfo(bufnr(), linenr)
+  let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
   endif
@@ -493,14 +492,14 @@ function! FormatTable()
 
   let row_boundaries = []
   call add(row_boundaries, table_info.first_linenr - 1)
-  call extend(row_boundaries, GetTableRowSeparators(lines, table_info.first_linenr))
+  call extend(row_boundaries, s:get_table_row_separators(lines, table_info.first_linenr))
   call add(row_boundaries, table_info.last_linenr + 1)
 
   let row_contents = []
   for boundary_index in range(len(row_boundaries) - 1)
     let first_index = row_boundaries[boundary_index] - table_info.first_linenr + 1
     let last_index = row_boundaries[boundary_index + 1] - table_info.first_linenr - 1
-    call add(row_contents, ListSlice(lines, first_index, last_index))
+    call add(row_contents, s:list_slice(lines, first_index, last_index))
   endfor
 
   for row in row_contents
@@ -510,17 +509,17 @@ function! FormatTable()
     endfor
   endfor
 
-  call map(row_contents, {_,row -> Transpose(row, len(table_info.cols), '')})
+  call map(row_contents, {_,row -> s:transpose(row, len(table_info.cols), '')})
 
   let line_counts = []
   for row in row_contents
-    call map(row, {column_index,column -> WrapText(column, table_info.cols[column_index])})
+    call map(row, {column_index,column -> s:wrap_text(column, table_info.cols[column_index])})
     call add(line_counts, max(map(copy(row), {_,column -> len(column)})))
   endfor
 
-  call map(row_contents, {row_index,row -> Transpose(row, line_counts[row_index], '')})
+  call map(row_contents, {row_index,row -> s:transpose(row, line_counts[row_index], '')})
 
-  let [row_separator, row_format_string] = MakeTableRowSeparatorAndFormatString(table_info.cols)
+  let [row_separator, row_format_string] = s:make_table_row_separators_and_format_string(table_info.cols)
   let Printf = function("printf", [row_format_string])
   for row in row_contents
     if !empty(row)
@@ -548,14 +547,14 @@ endfunction
 "   enter table insert mode
 function! StartTableInsert()
   let [_, linenr, columnnr, _] = getpos('.')
-  let table_info = GetTableInfo(bufnr(), linenr)
+  let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
   endif
 
-  let row = GetCursorTableParaRow(table_info, linenr)
-  let col = GetCursorTableColumn(table_info, linenr, columnnr)
-  let selection = GetParaCellSelection(table_info, row, col)
+  let row = s:get_cursor_table_pararow(table_info, linenr)
+  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
+  let selection = s:get_paracell_selection(table_info, row, col)
   if empty(selection)
     return
   endif
@@ -566,6 +565,7 @@ function! StartTableInsert()
 endfunction
 
 " IncrementTableRowColumn(table_info, row, column)
+"   TODO: development
 "   return next row,column index pair in the table
 "   return [-1,-1] if there is no next paragraph cell
 function! IncrementTableRowColumn(table_info, row, column)
@@ -575,7 +575,7 @@ function! IncrementTableRowColumn(table_info, row, column)
     return [-1, -1]
   endif
 
-  let row_heights = GetTableParaRowHeights(a:table_info)
+  let row_heights = s:get_table_pararow_heights(a:table_info)
 
   let cell_areas = []
   for height in row_heights

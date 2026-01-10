@@ -55,6 +55,9 @@ function s:config_table_mappings()
   " \ti to start table insert
   nnoremap <silent> <Leader>ti <CMD>StartTableInsert<CR>
 
+  " \tr to resize column at cursor
+  nnoremap <silent> <Leader>tr <CMD>ResizeTableColumn<CR>
+
   " \tc to select current paragraph-cell
   nnoremap <silent> <Leader>tc <CMD>SelectCursorParaCell<CR>
   vnoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
@@ -599,6 +602,10 @@ command! StartTableInsert call StartTableInsert()
 " FormatTable
 "   format table to width of current line
 command! FormatTable call FormatTable()
+
+" ResizeTableColumn
+"   resize table column to prompted width at cursor
+command! ResizeTableColumn call ResizeTableColumn()
 
 " CopyCWDToClipboard
 "   copy current working directory to clipboard

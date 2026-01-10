@@ -16,6 +16,10 @@
 "
 " See https://github.com/vimwiki/vimwiki for original inspiration
 
+" =========
+" Functions
+" =========
+
 " regex patterns used for tables
 let s:table_pattern = '^|.*|$'
 let s:table_sep_pattern = '^|\(-*|\)\+$'
@@ -478,16 +482,11 @@ function! s:make_table_row_separators_and_format_string(cols)
   return [row_separator, row_format_string]
 endfunction
 
-" FormatTable()
-"   format the current table, wrapping paragraph-cells based off the width of
-"   the first row separator
-function! FormatTable()
-  let [_, linenr, columnnr, _] = getpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
+" s:format_table(table_info)
+"   format a tbale, wrapping paragraph-cells based of the width of the first
+"   row separator
+function! s:format_table(table_info)
+  let l:table_info = a:table_info
   let lines = getbufline(table_info.bufnr, table_info.first_linenr, table_info.last_linenr)
 
   let row_boundaries = []
@@ -541,6 +540,46 @@ function! FormatTable()
 
   call deletebufline(table_info.bufnr, table_info.first_linenr, table_info.last_linenr)
   call appendbufline(table_info.bufnr, table_info.first_linenr - 1, lines)
+endfunction
+
+" FormatTable()
+"   format the table at the cursor
+function! FormatTable()
+  let [_, linenr, columnnr, _] = getpos('.')
+  let table_info = s:get_table_info(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  call s:format_table(table_info)
+endfunction
+
+let s:min_column_width = 5
+
+" ResizeTableColumn()
+"   prompt user to change the column width of the current table column
+function! ResizeTableColumn()
+  let [_, linenr, columnnr, _] = getpos('.')
+  let table_info = s:get_table_info(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
+
+  call inputsave()
+  let usr_column_width = str2nr(input("Column Width: ", table_info.cols[col]))
+  call inputrestore()
+  if usr_column_width < s:min_column_width
+    redraw
+    echohl ErrorMsg
+    echomsg "Invalid column width"
+    echohl None
+    return
+  endif
+
+  let table_info.cols[col] = usr_column_width
+  call s:format_table(table_info)
 endfunction
 
 " StartTableInsert()

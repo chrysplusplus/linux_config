@@ -591,6 +591,10 @@ function! StartTableInsert()
     return
   endif
 
+  " set table_edit_mode variable in buffer
+  let b:table_edit_mode = 1
+  let b:last_table_info = table_info
+
   let row = s:get_cursor_table_pararow(table_info, linenr)
   let col = s:get_cursor_table_column(table_info, linenr, columnnr)
   let selection = s:get_paracell_selection(table_info, row, col)
@@ -598,9 +602,28 @@ function! StartTableInsert()
     return
   endif
 
-  let [linenr, colnr, _, _] = selection
-  call setcharpos('.', [0, linenr, colnr, 0, colnr])
-  startreplace
+  let [start_linenr, start_colnr, end_linenr, end_colnr] = selection
+  let lines = getbufline(table_info.bufnr, start_linenr, end_linenr)
+  call map(lines,
+        \ {_,line -> trim(line[start_colnr - 1:end_colnr - 1])})
+
+  for idx in range(len(lines) - 1, 0, -1)
+    let line = lines[idx]
+    if empty(line)
+      continue
+    endif
+
+    let new_text = ' ' .. trim(line)
+    let replace_linenr = start_linenr + idx
+    let cur_start_colnr = start_colnr + len(new_text) - 2
+
+    let line_components = getline(replace_linenr)->split('|')
+    let line_components[col] = new_text .. ' '
+    call setline(replace_linenr, '|' .. join(line_components, '|') .. '|')
+    call setcharpos('.', [0, replace_linenr, cur_start_colnr, 0, cur_start_colnr])
+    startinsert
+    return
+  endfor
 endfunction
 
 " s:increment_table_row_column(table_info, row, column, row_off, col_off)

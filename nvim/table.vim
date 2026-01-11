@@ -320,7 +320,7 @@ endfunction
 " SelectCursorParaCell()
 "   select the paragraph-cell in the table containing the cursor
 function! SelectCursorParaCell()
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
@@ -338,7 +338,7 @@ endfunction
 "   select the table column containing the cursor, including the following
 "   column separator
 function! SelectTableColumn()
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
@@ -356,7 +356,7 @@ endfunction
 " SelectTableParaRow()
 "   select the paragraph-row of the table containing the cursor
 function! SelectTableParaRow()
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
@@ -545,7 +545,7 @@ endfunction
 " FormatTable()
 "   format the table at the cursor
 function! FormatTable()
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
@@ -559,7 +559,7 @@ let s:min_column_width = 5
 " ResizeTableColumn()
 "   prompt user to change the column width of the current table column
 function! ResizeTableColumn()
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
@@ -585,7 +585,7 @@ endfunction
 " StartTableInsert()
 "   enter table insert mode
 function! StartTableInsert()
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return
@@ -605,17 +605,17 @@ function! StartTableInsert()
   let [start_linenr, start_colnr, end_linenr, end_colnr] = selection
   let lines = getbufline(table_info.bufnr, start_linenr, end_linenr)
   call map(lines,
-        \ {_,line -> trim(line[start_colnr - 1:end_colnr - 1])})
+        \ {_,line -> trim(strcharpart(line, start_colnr - 1, end_colnr - start_colnr + 1))})
 
   for idx in range(len(lines) - 1, 0, -1)
     let line = lines[idx]
-    if empty(line)
+    if empty(line) && idx != 0
       continue
     endif
 
     let new_text = ' ' .. trim(line)
     let replace_linenr = start_linenr + idx
-    let cur_start_colnr = start_colnr + len(new_text) - 2
+    let cur_start_colnr = start_colnr + len(new_text) - 1
 
     let line_components = getline(replace_linenr)->split('|')
     let line_components[col] = new_text .. ' '
@@ -663,7 +663,7 @@ endfunction
 "   move cursor to beginning of the paragraph cell by the row and column
 "   offsets, if one exists, otherwise do nothing
 function! GotoRelParaCell(row_off, col_off)
-  let [_, linenr, columnnr, _] = getpos('.')
+  let [_, linenr, columnnr, _] = getcharpos('.')
   let table_info = s:get_table_info(bufnr(), linenr)
   if empty(table_info)
     return

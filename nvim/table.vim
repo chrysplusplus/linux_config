@@ -483,7 +483,7 @@ function! s:make_table_row_separators_and_format_string(cols)
 endfunction
 
 " s:format_table(table_info)
-"   format a tbale, wrapping paragraph-cells based of the width of the first
+"   format a table, wrapping paragraph-cells based of the width of the first
 "   row separator
 function! s:format_table(table_info)
   let l:table_info = a:table_info
@@ -684,4 +684,52 @@ function! GotoRelParaCell(row_off, col_off)
   let [linenr, colnr, _, _] = selection
   call setcharpos('.', [0, linenr, colnr, 0, colnr])
 endfunction
+
+" s:table_leave_insert_mode()
+"   format the previously edited table in buffer
+"   g:table_auto_format disrupts this behaviour
+function! s:table_leave_insert_mode()
+  if ! get(b:, 'table_edit_mode', 0)
+    return
+  endif
+
+  if get(g:, 'table_auto_format', 0)
+    return
+  endif
+
+  let b:table_edit_mode = 0
+  let table_info = get(b:, 'last_table_info')
+  if empty(table_info)
+    return
+  endif
+  let b:last_table_info = {}
+
+  let [_, linenr, columnnr, _] = getcharpos('.')
+  call s:format_table(table_info)
+  call setcharpos('.', [0, linenr, columnnr, 0, columnnr])
+endfunction
+
+" s:table_enter_insert_mode()
+"   set table edit mode if cursor is in a table
+function! s:table_enter_insert_mode()
+  let [_, linenr, _, _] = getcharpos('.')
+  let table_info = s:get_table_info(bufnr(), linenr)
+  if empty(table_info)
+    let b:table_edit_mode = 0
+    let b:last_table_info = {}
+  else
+    let b:table_edit_mode = 1
+    let b:last_table_info = table_info
+  endif
+endfunction
+
+" ============
+" Autocommands
+" ============
+
+augroup table_edit
+  autocmd!
+  autocmd InsertEnter * call <SID>table_enter_insert_mode()
+  autocmd InsertLeave * call <SID>table_leave_insert_mode()
+augroup END
 

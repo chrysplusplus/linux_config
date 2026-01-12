@@ -762,6 +762,7 @@ function! ChrysAirlineInit()
 endfunction
 
 augroup chrys_airline_init
+  autocmd!
   autocmd User AirlineAfterInit call ChrysAirlineInit()
 augroup END
 
@@ -772,6 +773,7 @@ let g:vimwiki_table_auto_fmt = 0
 " pear_tree configuration
 let g:pear_tree_ft_disabled = ['TelescopePrompt']
 let g:pear_tree_repeatable_expand = 0
+let g:pear_tree_map_special_keys = 0    " disabled for testing, but may remain disabled
 
 " telescope configuration
 "   map i_Ctrl-Backspace to backspace

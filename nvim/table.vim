@@ -898,9 +898,32 @@ endfunction
 
 " s:table_prev_cell()
 "   move cursor to the previous cell
-function s:table_prev_cell()
+function! s:table_prev_cell()
   call GotoRelParaCell(0, -1)
   call StartTableInsert()
+endfunction
+
+" TableExposeVariable(variable_name)
+"   use for extending this script
+"   return the value of an internal script variable
+function! TableExposeVariable(variable_name)
+  if !has_key(s:, a:variable_name)
+    echoerr "Unknown key '" .. a:variable_name .. "'"
+    return 0
+  endif
+  return get(s:, a:variable_name)
+endfunction
+
+" TableExposeFunction(function_name)
+"   use for extending this script
+"   return a funcref to an internal script function
+function! TableExposeFunction(function_name)
+  let Funcref = function("s:" .. a:function_name)
+  if Funcref == 0
+    echoerr "Unknown function '" .. a:function_name .. "'"
+    return  0
+  endif
+  return Funcref
 endfunction
 
 " ============

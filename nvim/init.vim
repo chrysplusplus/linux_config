@@ -3,14 +3,31 @@
 " =======
 source ~/.config/nvim/table.vim
 
+" ====================
+" table.vim Extensions
+" ====================
+let s:table_pattern = TableExposeVariable("table_pattern")
+let s:_table_insert_mode_return = TableExposeFunction("table_insert_mode_return")
+let s:_table_insert_mode_backspace = TableExposeFunction("table_insert_mode_backspace")
+
+function! s:in_table(text)
+  return match(a:text, s:table_pattern) == 0
+endfunction
+
+function! s:table_insert_mode_return()
+  return s:_table_insert_mode_return()
+endfunction
+
+function! s:table_insert_mode_backspace()
+  return s:_table_insert_mode_backspace()
+endfunction
+
 " ===================
 " Remapping Functions
 " ===================
 function! s:config_vimwiki_mappings()
   " Remap Ctrl-T to increase list indent for vimwiki
   imap <buffer> <C-T> <Plug>VimwikiIncreaseLvlSingleItem
-  " Fix for pear tree not working
-  imap <buffer> <BS> <Plug>(PearTreeBackspace)
   " \wO to open vimwiki notes in split view
   nmap <buffer> <LocalLeader>wO <Plug>VimwikiSplitLink
   " \wo to open vimwiki links in vertical split
@@ -31,6 +48,8 @@ function! s:config_vimwiki_mappings()
   nmap <buffer> - <Plug>VinegarUp
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
+  " dispatch return key to table.vim and vimwiki
+  inoremap <buffer><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_insert_mode_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
 endfunction
 
 function! s:config_cpp_mappings()
@@ -73,23 +92,23 @@ function s:config_table_mappings()
   vnoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
   onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
 
-  " disable | (bar) moving to beginning of line
-  nnoremap <silent> <Bar> <CMD><CR>
-  " |h (bar) to goto the left paragraph-cell
-  nnoremap <silent> <Bar>h <CMD>call GotoRelParaCell(0, -1)<CR>
-  " |j (bar) to goto the below paragraph-cell
-  nnoremap <silent> <Bar>j <CMD>call GotoRelParaCell(1, 0)<CR>
-  " |k (bar) to goto the above paragraph-cell
-  nnoremap <silent> <Bar>k <CMD>call GotoRelParaCell(-1, 0)<CR>
-  " |l (bar) to goto the right paragraph-cell
-  nnoremap <silent> <Bar>l <CMD>call GotoRelParaCell(0, 1)<CR>
-  " || (bar) to goto the right paragraph-cell
-  nnoremap <silent> <Bar><Bar> <CMD>call GotoRelParaCell(0, 0)<CR>
+  " \th to goto the left paragraph-cell
+  nnoremap <silent> \th <CMD>call GotoRelParaCell(0, -1)<CR>
+  " \tj to goto the below paragraph-cell
+  nnoremap <silent> \tj <CMD>call GotoRelParaCell(1, 0)<CR>
+  " \tk to goto the above paragraph-cell
+  nnoremap <silent> \tk <CMD>call GotoRelParaCell(-1, 0)<CR>
+  " \tl to goto the right paragraph-cell
+  nnoremap <silent> \tl <CMD>call GotoRelParaCell(0, 1)<CR>
+  " \t\t to goto the right paragraph-cell
+  nnoremap <silent> \t\t <CMD>call GotoRelParaCell(0, 0)<CR>
+
+  " dispatch for pear-tree compatibility
+  inoremap <silent><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_insert_mode_return() : "\<Plug>(PearTreeExpand)"
+  inoremap <silent><expr> <BS> <SID>in_table(getline('.')) ? <SID>table_insert_mode_backspace() : "\<Plug>(PearTreeBackspace)"
 endfunction
 
 function! s:config_telescope_mappings()
-  " \e to pick a buffer
-  nnoremap <silent> <Leader>e <CMD>Telescope buffers<CR>
   " \ee to pick a buffer
   nnoremap <silent> <Leader>ee <CMD>Telescope buffers<CR>
   " \er to grep
@@ -204,6 +223,8 @@ augroup chrys_ft_mappings
   " <C-J> in insert mode in python files refreshes coc
   autocmd FileType python inoremap <silent> <C-J> <CMD>call coc#refresh()<CR>
   autocmd FileType netrw call s:config_netrw_mappings()
+  " restore default backspace mapping for filetypes with pear-tree disabled
+  autocmd FileType TelescopePrompt inoremap <buffer> <BS> <BS>
 augroup END
 
 " =================
@@ -768,12 +789,16 @@ augroup END
 
 " vimwiki customisation
 let g:vimwiki_global_ext = 0
+"   disable vimwiki tables in preference for table.vim
 let g:vimwiki_table_auto_fmt = 0
+let g:vimwiki_key_mappings = {
+      \ 'table_format': 0,
+      \ 'table_mappings': 0,
+      \ }
 
 " pear_tree configuration
 let g:pear_tree_ft_disabled = ['TelescopePrompt']
 let g:pear_tree_repeatable_expand = 0
-let g:pear_tree_map_special_keys = 0    " disabled for testing, but may remain disabled
 
 " telescope configuration
 "   map i_Ctrl-Backspace to backspace

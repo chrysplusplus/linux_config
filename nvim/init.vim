@@ -759,7 +759,7 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'tmsvg/pear-tree'
 
 Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-lua/telescope.nvim', { 'tag': '0.1.6' }
+Plug 'nvim-lua/telescope.nvim'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 
 Plug 'tpope/vim-vinegar'

@@ -718,6 +718,41 @@ function! GotoRelParaCell(row_off, col_off)
   call setcharpos('.', [0, linenr, colnr, 0, colnr])
 endfunction
 
+" InsertColumn(width)
+"   add a column of specified width at the end of the table
+"   use visual block mode to move this column to desired location
+function InsertColumn(width)
+  let [_, linenr, columnnr, _] = getcharpos('.')
+  let table_info = s:get_table_info(bufnr(), linenr)
+  if empty(table_info)
+    return
+  endif
+
+  call add(table_info.cols, max([a:width, s:min_column_width]))
+  call s:format_table(table_info)
+  call setcharpos('.', [0, linenr, columnnr, 0, columnnr])
+endfunction
+
+" s:insert_row(table_info)
+"   add a row at the end of the specified table
+function s:insert_row(table_info)
+  let l:table_info = a:table_info
+  let [row_separator, format_string] =
+        \ s:make_table_row_separators_and_format_string(table_info.cols)
+  call appendbufline(table_info.bufnr, table_info.last_linenr, [
+        \ substitute(row_separator, '-', ' ', 'g'), row_separator])
+endfunction
+
+" InsertRow()
+"   add a row at the end of the table
+function InsertRow()
+  let [_, linenr, columnnr, _] = getcharpos('.')
+  let table_info = s:get_table_info(bufnr(), linenr)
+  if ! empty(table_info)
+    call s:insert_row(table_info)
+  endif
+endfunction
+
 " s:format_at_cursor()
 "   format the previously edited table in buffer
 "   g:table_auto_format disrupts this behaviour
@@ -876,12 +911,7 @@ function! s:table_next_cell()
   let col = s:get_cursor_table_column(table_info, linenr, columnnr)
   let [next_row, next_col] = s:increment_table_row_column(table_info, row, col, 0, 1)
   if next_row == -1 || next_col == -1
-    " add new row
-    let [row_separator, format_string] =
-          \ s:make_table_row_separators_and_format_string(table_info.cols)
-    call appendbufline(table_info.bufnr, table_info.last_linenr, [
-          \ substitute(row_separator, '-', ' ', 'g'), row_separator])
-
+    call s:insert_row(table_info)
     let table_info = s:get_table_info(bufnr(), linenr)
     let next_row = row + 1
     let next_col = 0

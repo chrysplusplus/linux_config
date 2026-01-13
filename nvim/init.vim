@@ -634,6 +634,14 @@ command! FormatTable call FormatTable()
 "   resize table column to prompted width at cursor
 command! ResizeTableColumn call ResizeTableColumn()
 
+" InsertColumn
+"   insert column of specified width at the end of the table
+command! -nargs=1 InsertColumn call InsertColumn(<args>)
+
+" InsertRow
+"   insert row at the end of the table
+command! InsertRow call InsertRow()
+
 " CopyCWDToClipboard
 "   copy current working directory to clipboard
 command! CopyCWDToClipboard call setreg("*", getcwd())
@@ -683,6 +691,7 @@ set incsearch
 set path+=**
 set mousescroll=ver:1,hor:6
 set laststatus=3
+set sidescroll=0
 
 " set custom tabline
 set showtabline=2

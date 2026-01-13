@@ -26,6 +26,7 @@
 let s:table_pattern = '^|.*|$'
 let s:table_sep_pattern = '^|\(-*|\)\+$'
 let s:table_make_pattern = '^|\(\d\+|\)\+$'
+let s:table_line_end_pattern = '\(| \)\?\zs\s\{2,}'
 
 " s:get_table_info(bufnr, linenr)
 "   return table information around a line in a buffer
@@ -829,8 +830,8 @@ function! s:table_next_line()
   endif
 
   unlet b:table_auto_hold
-  execute "normal" "jF|"
-  call search('\(| \)\?\zs\s\{2,}')
+  execute "normal" "F|j"
+  call search(s:table_line_end_pattern)
   startinsert
 endfunction
 
@@ -855,8 +856,8 @@ function! s:table_prev_line()
 
   let [start_linenr, _, _, _] = selection
   if linenr != start_linenr
-    normal k
-    call search('\(| \)\?\zs\s\{2,}')
+    execute "normal" "F|k"
+    call search(s:table_line_end_pattern)
   endif
   startinsert
 endfunction

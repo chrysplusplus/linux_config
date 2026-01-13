@@ -787,16 +787,10 @@ function! s:table_insert_mode_backspace()
   let [_, linenr, columnnr, _] = getcharpos('.')
   let current_line = getbufoneline(bufnr(), linenr)
   if match(current_line, s:table_pattern) == 0
-    let table_info = s:get_table_info(bufnr(), linenr)
-    let edge_columnnr = 1
-    for column_width in table_info.cols
-      if columnnr == edge_columnnr + 2
+    if search('| \%#', 'bn', line('.')) != 0
       let b:table_auto_hold = 1
-        return "\<Esc>\<Plug>(TablePrevLine)"
-      endif
-
-      let edge_columnnr = edge_columnnr + column_width + 3
-    endfor
+      return "\<Esc>\<Plug>(TablePrevLine)"
+    endif
   endif
 
   return "\<BS>"
@@ -835,7 +829,8 @@ function! s:table_next_line()
   endif
 
   unlet b:table_auto_hold
-  execute "normal" "jf|gEll"
+  execute "normal" "jF|"
+  call search('\(| \)\?\zs\s\{2,}')
   startinsert
 endfunction
 
@@ -860,7 +855,8 @@ function! s:table_prev_line()
 
   let [start_linenr, _, _, _] = selection
   if linenr != start_linenr
-    execute "normal" "kf|gEll"
+    normal k
+    call search('\(| \)\?\zs\s\{2,}')
   endif
   startinsert
 endfunction

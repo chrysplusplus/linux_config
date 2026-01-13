@@ -813,7 +813,7 @@ endfunction
 function! s:table_insert_mode_stab()
   let current_line = getbufoneline(bufnr(), line('.'))
   if match(current_line, s:table_pattern) == 0
-    return "\<Esc>\<CMD>call GotoRelParaCell(0, -1)\<Bar>call StartTableInsert()\<CR>"
+    return "\<Esc>\<Plug>(TablePrevCell)"
   endif
 
   return "\<S-Tab>"

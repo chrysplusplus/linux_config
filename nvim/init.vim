@@ -93,15 +93,15 @@ function s:config_table_mappings()
   onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
 
   " \th to goto the left paragraph-cell
-  nnoremap <silent> \th <CMD>call GotoRelParaCell(0, -1)<CR>
+  nnoremap <silent> <Leader>th <CMD>call GotoRelParaCell(0, -1)<CR>
   " \tj to goto the below paragraph-cell
-  nnoremap <silent> \tj <CMD>call GotoRelParaCell(1, 0)<CR>
+  nnoremap <silent> <Leader>tj <CMD>call GotoRelParaCell(1, 0)<CR>
   " \tk to goto the above paragraph-cell
-  nnoremap <silent> \tk <CMD>call GotoRelParaCell(-1, 0)<CR>
+  nnoremap <silent> <Leader>tk <CMD>call GotoRelParaCell(-1, 0)<CR>
   " \tl to goto the right paragraph-cell
-  nnoremap <silent> \tl <CMD>call GotoRelParaCell(0, 1)<CR>
+  nnoremap <silent> <Leader>tl <CMD>call GotoRelParaCell(0, 1)<CR>
   " \t\t to goto the right paragraph-cell
-  nnoremap <silent> \t\t <CMD>call GotoRelParaCell(0, 0)<CR>
+  nnoremap <silent> <Leader>t<Leader>t <CMD>call GotoRelParaCell(0, 0)<CR>
 
   " dispatch for pear-tree compatibility
   inoremap <silent><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_insert_mode_return() : "\<Plug>(PearTreeExpand)"
@@ -129,9 +129,15 @@ function! s:config_leader_mappings()
   " \s to toggle spell check
   nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
   " \h to toggle highlighted search
-  nnoremap <silent> <Leader>h <CMD>set hlsearch!<cr>
+  "   with table dispatch
+  nnoremap <silent><expr> <Leader>h <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(0, -1)<CR>' : '<CMD>set hlsearch!<cr>'
+  " \j to goto the below paragraph-cell
+  nnoremap <silent><expr> <Leader>j <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(1, 0)<CR>' : 'j'
+  " \k to goto the above paragraph-cell
+  nnoremap <silent><expr> <Leader>k <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(-1, 0)<CR>' : 'k'
   " \l to toggle colour line
-  nnoremap <silent> <Leader>l <CMD>setl cul!<CR>
+  "   with table dispatch
+  nnoremap <silent><expr> <Leader>l <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(0, 1)<CR>' : '<CMD>setl cul!<CR>'
   " \L to toggle visible whitespace
   nnoremap <silent> <Leader>L <CMD>setl list!<CR>
   " \z to toggle goyo mode

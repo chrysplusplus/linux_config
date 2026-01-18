@@ -852,7 +852,6 @@ let notes_wiki.auto_diary_index = 1
 let notes_wiki.auto_toc = 1
 let notes_wiki.auto_tags = 1
 let notes_wiki.auto_generate_tags = 1
-let notes_wiki.index = 'the note'
 
 let techtona_wiki = {}
 let techtona_wiki.path = '~/Documents/Writing/techtona_wiki/'

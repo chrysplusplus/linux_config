@@ -1023,6 +1023,10 @@ command! SelectTableColumn call SelectTableColumn()
 "   select the paragraph-cell in the table containing the cursor
 command! SelectTableParaRow call SelectTableParaRow()
 
+" StartTableInsert
+"   start replace mode at beginning of paragraph-cell
+command! StartTableInsert call StartTableInsert()
+
 " FormatTable
 "   format table to width of current line
 command! FormatTable call FormatTable()
@@ -1222,6 +1226,9 @@ nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
 
 " \tt to format table
 nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
+
+" \ti to start table insert
+nnoremap <silent> <Leader>ti <CMD>StartTableInsert<CR>
 
 " \tc to select current paragraph-cell
 nnoremap <silent> <Leader>tc <CMD>SelectCursorParaCell<CR>

@@ -109,8 +109,9 @@ function s:config_table_mappings()
 endfunction
 
 function! s:config_telescope_mappings()
-  " \ee to pick a buffer
+  " \ee and Alt-e to pick a buffer
   nnoremap <silent> <Leader>ee <CMD>Telescope buffers<CR>
+  nnoremap <silent> <M-e> <CMD>Telescope buffers<CR>
   " \er to grep
   nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
   " \et to pick a tag

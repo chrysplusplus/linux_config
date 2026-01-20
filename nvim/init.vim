@@ -210,6 +210,9 @@ nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
 imap <C-H> <C-W>
 cmap <C-H> <C-W>
 
+" Esc to escape terminal
+tmap <C-[> <C-\><C-N>
+
 " Q to format paragraph (similar to vim)
 nnoremap Q <CMD>FormatParagraph<CR>
 

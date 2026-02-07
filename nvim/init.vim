@@ -145,8 +145,9 @@ function! s:config_leader_mappings()
   nnoremap <silent> <Leader>z <CMD>Goyo<cr>
   " \n to toggle line numbers
   nnoremap <silent> <Leader>n <CMD>setl nu! rnu!<CR>
-  " \g to open fugitive buffer
+  " \g to open fugitive buffer and Alt-G
   nnoremap <silent> <expr> <Leader>g exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
+  nnoremap <silent> <expr> <M-g> exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
 endfunction
 
 function! s:config_windowing_mappings()

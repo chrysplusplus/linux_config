@@ -36,7 +36,7 @@ let s:table_line_end_pattern = '\(| \)\?\zs\s\{2,}'
 "     last_linenr: last line of the table
 "     first_row_separator_linenr: line containing first row separator
 "     cols: list of column widths, assuming table is correctly formatted
-function! s:get_table_info(bufnr, linenr)
+function! s:get_table_info(bufnr, linenr) "-> {bufnr, firstlnr, lastlnr, firstsep, [cols]}
   let lines = getbufline(a:bufnr, 1, '$')
   let current_line = lines[a:linenr - 1]
 
@@ -97,7 +97,7 @@ endfunction
 
 " s:get_table_pararow_heights(table_info)
 "   return list of heights of paragraph-rows in a table
-function! s:get_table_pararow_heights(table_info)
+function! s:get_table_pararow_heights(table_info) "-> [height]
   let lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
   let row_boundaries = copy(lines)->map({idx,line -> match(line, s:table_sep_pattern) == 0 ? idx : -1})->filter({_,v -> v != -1})
   call insert(row_boundaries, -1, 0)
@@ -116,7 +116,7 @@ endfunction
 
 " s:get_cursor_table_column(table_info, linenr, columnnr)
 "   return column index of cursor in a table
-function! s:get_cursor_table_column(table_info, linenr, columnnr)
+function! s:get_cursor_table_column(table_info, linenr, columnnr) "-> index
   if empty(a:table_info)
     return -1
   endif
@@ -139,7 +139,7 @@ endfunction
 
 " s:get_cursor_table_pararow(cursor)
 "   return paragraph-row index of cursor in a table
-function! s:get_cursor_table_pararow(table_info, linenr)
+function! s:get_cursor_table_pararow(table_info, linenr) "-> index
   if empty(a:table_info)
     return -1
   endif
@@ -163,7 +163,7 @@ endfunction
 " s:get_table_column_bounds(table_info, column_index)
 "   return the start and end of the text boundary for a column of a table
 "   return [-1,-1] if column has no text boundary
-function! s:get_table_column_bounds(table_info, column_index)
+function! s:get_table_column_bounds(table_info, column_index) "-> [startcol, endcol]
   if assert_true(a:column_index < len(a:table_info.cols), 'column index out-of-bounds')
     return [-1,-1]
   endif
@@ -192,7 +192,7 @@ endfunction
 " not for exported use
 " TODO maybe remove and replace usage with row heights
 " so the same algorithm can be used for columns and rows
-function! s:get_table_row_separators(lines, first_linenr)
+function! s:get_table_row_separators(lines, first_linenr) "-> [linenr]
   let separator_linenrs = []
   let index = 0
   let max_index = len(a:lines) - 1
@@ -214,7 +214,7 @@ endfunction
 "     text_start_linenr: line number for the text start, or -1
 "     text_end_linenr:   line number for the text end, or -1
 "   return empty Dictionary if para_index is out of bounds
-function! s:get_table_pararow_info(table_info, para_index)
+function! s:get_table_pararow_info(table_info, para_index) "-> {before_sep, after_sep, txt_start, txt_end}
   let table_lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
   let separator_linenrs = s:get_table_row_separators(table_lines, a:table_info.first_linenr)
 
@@ -288,7 +288,7 @@ endfunction
 "   return [start_linenr, start_colnr, end_linenr, end_colnr]
 "   return empty list for invalid selections
 "   not for exported use
-function! s:get_paracell_selection(table_info, row, col)
+function! s:get_paracell_selection(table_info, row, col) "-> [startlnr, startcol, endlnr, endcol]
   let row_heights = s:get_table_pararow_heights(a:table_info)
   if assert_true(a:row >= 0 && a:row < len(row_heights), "row out-of-bounds")
     return []
@@ -381,7 +381,7 @@ endfunction
 " s:list_slice(l, first, last)
 "   TODO change to use internal vim function
 "   return a copy of l containg the elements between first and last
-function! s:list_slice(l, first, last)
+function! s:list_slice(l, first, last) "-> List
   let result = []
   for index in range(a:first, a:last)
     call add(result, a:l[index])
@@ -393,7 +393,7 @@ endfunction
 "   return transposed list of lists, sublist_len is a number that specifies
 "   the maximum length of a sublist, default is the default value if index is
 "   not found
-function! s:transpose(list_of_lists, sublist_len, default)
+function! s:transpose(list_of_lists, sublist_len, default) "-> List[List]
   if empty(a:list_of_lists)
     return a:list_of_lists
   endif
@@ -413,7 +413,7 @@ endfunction
 "   return list of lines of paragraph lines wrapped to width
 "   any blank lines are interpreted as paragraph breaks, and so persist after
 "   wrapping
-function! s:wrap_text(lines, width)
+function! s:wrap_text(lines, width) "-> [line]
   let paragraphs = []
   let current_paragraph = ''
   for line in a:lines
@@ -481,7 +481,7 @@ endfunction
 
 " s:make_table_row_separators_and_format_string(cols)
 "   return row_separator and format string
-function! s:make_table_row_separators_and_format_string(cols)
+function! s:make_table_row_separators_and_format_string(cols) "-> [row_sep, row_fmt_str]
   let row_separator = '|'
   let row_format_string = '|'
   for column_width in a:cols
@@ -662,7 +662,7 @@ endfunction
 " s:increment_table_row_column(table_info, row, column, row_off, col_off)
 "   return next row,column index pair in the table by row and col offsets
 "   return [-1,-1] if there is no next paragraph cell
-function! s:increment_table_row_column(table_info, row, column, row_off, col_off)
+function! s:increment_table_row_column(table_info, row, column, row_off, col_off) "-> [row, col]
   if assert_true(a:row >= 0, "row out-of-bounds")
     return [-1, -1]
   elseif assert_true(a:column >= 0, "col out-of-bounds")
@@ -802,7 +802,7 @@ endfunction
 
 " s:table_insert_mode_return()
 "   return mapping for current return context
-function! s:table_insert_mode_return()
+function! s:table_insert_mode_return() "-> mapping
   let current_line = getbufoneline(bufnr(), line('.'))
 
   if match(current_line, s:table_make_pattern) == 0
@@ -819,9 +819,9 @@ endfunction
 
 " s:table_insert_mode_backspace()
 "   return mapping for current backspace context
-function! s:table_insert_mode_backspace()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let current_line = getbufoneline(bufnr(), linenr)
+function! s:table_insert_mode_backspace() "-> mapping
+  let current_line = getbufoneline(bufnr(), line('.'))
+
   if match(current_line, s:table_pattern) == 0
     if search('| \%#', 'bn', line('.')) != 0
       let b:table_auto_hold = 1
@@ -834,8 +834,9 @@ endfunction
 
 " s:table_insert_mode_tab()
 "   return mapping for current tab context
-function! s:table_insert_mode_tab()
+function! s:table_insert_mode_tab() "-> mapping
   let current_line = getbufoneline(bufnr(), line('.'))
+
   if match(current_line, s:table_pattern) == 0
     return "\<Esc>\<Plug>(TableNextCell)"
   endif
@@ -845,8 +846,9 @@ endfunction
 
 " s:table_insert_mode_stab()
 "   return mapping for current shift-tab context
-function! s:table_insert_mode_stab()
+function! s:table_insert_mode_stab() "-> mapping
   let current_line = getbufoneline(bufnr(), line('.'))
+
   if match(current_line, s:table_pattern) == 0
     return "\<Esc>\<Plug>(TablePrevCell)"
   endif
@@ -859,6 +861,7 @@ endfunction
 function! s:table_next_line()
   let bufnr = bufnr()
   let linenr = line('.')
+
   if match(getbufoneline(bufnr, linenr + 1), s:table_sep_pattern) == 0
     let next_line = getbufoneline(bufnr, linenr + 1)
     call appendbufline(bufnr, linenr, substitute(next_line, '-', ' ', 'g'))
@@ -933,7 +936,7 @@ endfunction
 " TableExposeVariable(variable_name)
 "   use for extending this script
 "   return the value of an internal script variable
-function! TableExposeVariable(variable_name)
+function! TableExposeVariable(variable_name) "-> variable
   if !has_key(s:, a:variable_name)
     echoerr "Unknown key '" .. a:variable_name .. "'"
     return 0
@@ -944,7 +947,7 @@ endfunction
 " TableExposeFunction(function_name)
 "   use for extending this script
 "   return a funcref to an internal script function
-function! TableExposeFunction(function_name)
+function! TableExposeFunction(function_name) "-> funcref
   let Funcref = function("s:" .. a:function_name)
   if Funcref == 0
     echoerr "Unknown function '" .. a:function_name .. "'"

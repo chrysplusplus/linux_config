@@ -19,6 +19,130 @@
 " Lots of features to come to bring this implementation in-line with vimwiki's
 "
 " See https://github.com/vimwiki/vimwiki for original inspiration
+"
+" See https://github.com/chrysplusplus/linux_config for an example
+" configuration using this script.
+"
+" Usage:
+"
+" To use this script, source it from your initrc; no need for a plugin
+" manager.
+"
+" To create a table, open a file and type the following line (without the
+" leading comment mark and indentation, of course):
+"
+" |10|10|10|
+"
+" This is called a make string. Note that there is not whitespace at the end
+" of the line. When you hit Enter (or if you exit insert mode on the same
+" line), the script will replace this line with a table that looks like this:
+"
+" |------------|------------|------------|
+" | #          |            |            |
+" |------------|------------|------------|
+"
+" Where '#' represents the cursor position. When you type a make string and
+" hit Enter, the script positions your cursor so that you can immediately
+" start typing in the table. Unlike other table scripts, if you hit Enter
+" while typing in a cell, it won't move your cursor down to the next row, but
+" rather will split the line at the cursor and move the rest of the line down
+" to the next line, expanding the table as necessary. For example, if I have
+" the following table ('#' once again representing the cursor position):
+"
+" |------------|------------|------------|
+" | one line   | two#lines  |            |
+" |------------|------------|------------|
+"
+" When I hit Enter, it results in the following:
+"
+" |------------|------------|------------|
+" | one line   | two |            |
+" |            |#lines |            |
+" |------------|------------|------------|
+"
+" Looks messy, but this is part of how the script stays simple and unobtrusive
+" — it will only format the table when you exit insert mode. If we do so at
+" this point, the table will look like it did before we hit Enter. This is
+" because the formatting wraps the text of each paragraph in the cell. If we
+" hit Enter again, we get:
+"
+" |------------|------------|------------|
+" | one line   | two |            |
+" |            |  |            |
+" |            | lines |            |
+" |------------|------------|------------|
+"
+" Now that "two" and "lines" are separated by a blank line (i.e. there is
+" nothing between the pipes '|' others than spaces), they are considered
+" separated paragraphs. So, when we format the table (either by leaving insert
+" mode, or if auto formatting is disabled by calling the FormatTable command),
+" we get the following:
+"
+" |------------|------------|------------|
+" | one line   | two        |            |
+" |            |            |            |
+" |            | lines      |            |
+" |------------|------------|------------|
+"
+" This behaviour seems to be unique to this script. Most scripts implementing
+" markdown-like tables in vim would see this as a table with three columns, no
+" header, and three rows; whereas this script sees a table with three columns
+" and one row.
+"
+" Going on from here, you can insert rows and columns using the InsertRow and
+" InsertColumn commands respectively. The ResizeTableColumn command can be
+" used to change the width of columns in the table, but you can also edit the
+" first of the table to achieve the same effect.
+"
+" Happy writing!
+"
+" This behaviour of this script can be customised with the following
+" variables:
+"
+" Customisation Variable: g:table_auto_format, b:table_auto_format
+"
+" If non-zero, the script auto-formats tables when leaving insert mode. Can be
+" also enabled for individual buffers by setting b:table_auto_format
+"
+" Defaults to 1
+"
+" Customisation Variable: g:table_inhibit_leader_keys
+"
+" If non-zero, the script will not map leader keys for table operations, which
+" may be desired if the mappings would conflict, or the user wants to use
+" custom mappings. See the Mappings section for which plug keys are available.
+" These can be mapped as follows:
+"
+" :nmap tti <Plug>(TableCellInsert)
+"
+" This would map 'tti' to enter insert mode at the end of text in the table
+" cell under the cursor.
+"
+" Defaults to 0
+"
+" Customisation Variable: g:table_inhibit_text_objects
+"
+" If non-zero, the script will not map keys for table text objects, which may
+" be desired if the mappings would conflict, or the user wants to use custom
+" mappings. See the Mappings section for which text objects are available. It
+" is recommended to create mappings for all three modes, for example:
+"
+" :nnoremap ttic <Plug>(TableSelectCell)
+" :vnoremap ic <Plug>(VTableSelectCell)
+" :onoremap ic <Plug>(OTableSelectCell)
+"
+" This would map 'ttic' in normal mode to select the table cell under the
+" cursor in visual-block mode, enter this selection in visual mode, and use
+" the selection when an operator is pending (for example, 'dic' would be
+" mapped to block delete the table cell.)
+"
+" Please note the prefix on each plug key. Normal mode mappings don't use a
+" prefix, but visual mode and operator mode mappings use V and O respectively.
+" It would be incorrect to map a plug key in the wrong mode, as this could
+" have unintended side-effects and unknown behaviour. Please take care when
+" mapping keys in vim.
+"
+" Defaults to 0
 
 " regex patterns used for tables
 let s:table_pattern = '^|.*|$'
@@ -33,8 +157,9 @@ let s:min_column_width = 5
 
 function! s:au_insert_leave()
   " callback for InsertLeave autocommand
-  " TODO document b: and g:table_auto_format
   if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
+    return
+  elseif get(b:, "table_working", 0)
     return
   endif
 
@@ -42,20 +167,30 @@ function! s:au_insert_leave()
   if s:matches(current_line, s:table_make_pattern)
     let b:table_working = 1
     call s:plug_make()
-  elseif s:matches(current_line, s:table_pattern) && ! get(b:, "table_working", 0)
+  elseif s:matches(current_line, s:table_pattern)
     call s:format_table_at_cursor()
   endif
 endfunction
 
 function! s:imap_return() "-> mapping
   " key mapping evaluator for CR
-  let current_line = getline('.')
-  if s:matches(current_line, s:table_make_pattern)
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+
+  if s:matches(line, s:table_make_pattern)
     let b:table_working = 1
     return "\<Esc>\<Plug>(TableMake)i"
-  elseif s:matches(current_line, s:table_sep_pattern)
+  elseif colnr == 1
+    return "\<CR>"
+  elseif colnr == strcharlen(line) + 1
+    return "\<CR>"
+  elseif linenr == 1
+    return "\<CR>"
+  elseif ! s:matches(getline(linenr + 1), s:table_pattern)
+    return "\<CR>"
+  elseif s:matches(line, s:table_sep_pattern)
     return "\<Esc>\<Plug>(TableThisCell)i"
-  elseif s:matches(current_line, s:table_pattern)
+  elseif s:matches(line, s:table_pattern)
     let b:table_working = 1
     return "\<Esc>\<Plug>(TableSplitLine)i"
   else
@@ -86,12 +221,17 @@ endfunction
 
 function! s:imap_backspace() "-> mapping
   " key mapping evaluator for Backspace
-  let current_line = getline('.')
-  if s:matches(current_line, s:table_make_pattern)
+  let linenr = line('.')
+  let line = getline(linenr)
+  if s:matches(line, s:table_make_pattern)
     return "\<BS>"
-  elseif s:matches(current_line, s:table_sep_pattern)
+  elseif s:matches(line, s:table_sep_pattern)
     return "\<BS>"
-  elseif s:matches(current_line, s:table_pattern) && s:is_cursor_at_col_start()
+  elseif linenr == 1
+    return "\<BS>"
+  elseif ! s:matches(getline(linenr - 1), s:table_pattern)
+    return "\<BS>"
+  elseif s:matches(line, s:table_pattern) && s:is_cursor_at_col_start()
     let b:table_working = 1
     return "\<Esc>\<Plug>(TableJoinLine)i"
   else
@@ -129,9 +269,7 @@ function! s:plug_make()
   call append(linenr, [line, sep])
   call setcursorcharpos(linenr + 1, 3)
 
-  if exists("b:table_working")
-    unlet b:table_working
-  endif
+  unlet b:table_working
 endfunction
 
 function! s:plug_this_cell()
@@ -208,9 +346,8 @@ function! s:plug_split_line()
   " handler for split_line operation
   let [linenr, colnr] = s:cursor_pos()
   let current_line = getline(linenr)
-  let byte = byteidx(current_line, colnr - 1)
   let col_idx = s:col_idx_from_line(current_line, colnr)
-
+  let byte = byteidx(current_line, colnr - 1)
   let [before_text, after_text] = s:split_col_text(current_line, byte)
   let before_text = ' ' .. trim(before_text) .. ' '
   let after_text = ' ' .. trim(after_text) .. ' '
@@ -233,9 +370,7 @@ function! s:plug_split_line()
 
   call setcursorcharpos(linenr + 1, 0)
   call s:move_cursor_to_col_text_start(col_idx)
-  if exists("b:table_working")
-    unlet b:table_working
-  endif
+  call s:maybe_unlet_b_table_working()
 endfunction
 
 function! s:plug_join_line()
@@ -360,6 +495,10 @@ function! s:plug_left_cell()
 
   let col_idx -= 1
   let bot_sep = s:find_next_sep(linenr)
+  if bot_sep == -1
+    return
+  endif
+
   let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
 
   call setcursorcharpos(new_linenr, 0)
@@ -376,6 +515,10 @@ function! s:plug_right_cell()
 
   let col_idx = s:col_idx_from_line(line, colnr)
   let bot_sep = s:find_next_sep(linenr)
+  if bot_sep == -1
+    return
+  endif
+
   let max_col_idx = s:max_col_idx_from_line(getline(bot_sep))
   if col_idx == max_col_idx
     return
@@ -507,6 +650,13 @@ endfunction
 " =========
 " Functions
 " =========
+
+function! s:maybe_unlet_b_table_working()
+  " unset b:table_working if it was set
+  if exists("b:table_working")
+    unlet b:table_working
+  endif
+endfunction
 
 function! s:insert_col_at_cursor(column_width)
   " insert a new column after the column containing the cursor
@@ -836,16 +986,24 @@ endfunction
 function! s:create_table_formatter(cur_linenr, cur_colnr) "-> Dictionary
   " return dictionary representing a formatter object
   " return empty dictionary if cur_linenr is not in the table
-  if ! s:matches(getline(a:cur_linenr), s:table_pattern)
+  let line = getline(a:cur_linenr)
+  if ! s:matches(line, s:table_pattern)
+    return {}
+  elseif s:matches(line, s:table_make_pattern)
     return {}
   endif
 
   let first_sep = s:find_first_sep(a:cur_linenr)
+  let last_sep = s:find_last_sep(a:cur_linenr)
+  if first_sep == last_sep
+    return {}
+  endif
+
   let formatter = {
         \ 'cur_linenr': a:cur_linenr,
         \ 'cur_colnr': a:cur_colnr,
         \ 'first_sep': first_sep,
-        \ 'last_sep': s:find_last_sep(a:cur_linenr),
+        \ 'last_sep': last_sep,
         \ 'cols': s:cols_on_line(first_sep),
         \ 'collect_row': function("<SID>formatter_collect_row"),
         \ 'wrap_column': function("<SID>formatter_wrap_column"),
@@ -1017,8 +1175,7 @@ inoremap <silent> <expr> <BS> <SID>imap_backspace()
 nnoremap <silent> <expr> { <SID>nmap_left_curly()
 nnoremap <silent> <expr> } <SID>nmap_right_curly()
 
-" TODO document g:table_inhibit_leader_keys
-if get(g:, "table_inhibit_leader_keys", 1)
+if ! get(g:, "table_inhibit_leader_keys", 0)
   nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
   nnoremap <silent> <Leader>ti <Plug>(TableCellInsert)
   nnoremap <silent> <Leader>tr <CMD>ResizeTableColumn<CR>
@@ -1028,8 +1185,7 @@ if get(g:, "table_inhibit_leader_keys", 1)
   nnoremap <silent> <Leader>tk <Plug>(TableUpCell)
 endif
 
-" TODO document g:table_inhibit_text_objects
-if get(g:, "table_inhibit_text_objects", 1)
+if ! get(g:, "table_inhibit_text_objects", 0)
   nnoremap <silent> <Leader>tc <Plug>(TableSelectCell)
   vnoremap <silent> <Leader>tc <Plug>(VTableSelectCell)
   onoremap <silent> <Leader>tc <Plug>(OTableSelectCell)
@@ -1045,13 +1201,10 @@ endif
 " Commands
 " ========
 
-" TODO document g:table_inhibit_commands
-if get(g:, "table_inhibit_commands", 1)
-  command! FormatTable call <SID>format_table_at_cursor()
-  command! -nargs=? ResizeTableColumn call <SID>resize_table_at_cursor(<args>)
-  command! InsertRow call <SID>insert_row_at_cursor()
-  command! -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
-endif
+command! FormatTable call <SID>format_table_at_cursor()
+command! -nargs=? ResizeTableColumn call <SID>resize_table_at_cursor(<args>)
+command! InsertRow call <SID>insert_row_at_cursor()
+command! -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
 
 " ==========
 " Extensions

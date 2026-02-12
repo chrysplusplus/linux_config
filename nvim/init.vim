@@ -1,25 +1,25 @@
 " =======
 " Sources
 " =======
-source ~/.config/nvim/table.vim
+source ~/.config/nvim/table2.vim
 
 " ====================
 " table.vim Extensions
 " ====================
 let s:table_pattern = TableExposeVariable("table_pattern")
-let s:_table_insert_mode_return = TableExposeFunction("table_insert_mode_return")
-let s:_table_insert_mode_backspace = TableExposeFunction("table_insert_mode_backspace")
+let s:_table_imap_return = TableExposeFunction("imap_return")
+let s:_table_imap_backspace = TableExposeFunction("imap_backspace")
 
 function! s:in_table(text)
   return match(a:text, s:table_pattern) == 0
 endfunction
 
-function! s:table_insert_mode_return()
-  return s:_table_insert_mode_return()
+function! s:table_imap_return()
+  return s:_table_imap_return()
 endfunction
 
-function! s:table_insert_mode_backspace()
-  return s:_table_insert_mode_backspace()
+function! s:table_imap_backspace()
+  return s:_table_imap_backspace()
 endfunction
 
 " ===================
@@ -49,7 +49,7 @@ function! s:config_vimwiki_mappings()
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
   " dispatch return key to table.vim and vimwiki
-  inoremap <buffer><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_insert_mode_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
+  inoremap <buffer><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
 endfunction
 
 function! s:config_cpp_mappings()
@@ -68,44 +68,9 @@ function! s:config_netrw_mappings()
 endfunction
 
 function s:config_table_mappings()
-  " \tt to format table
-  nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
-
-  " \ti to start table insert
-  nnoremap <silent> <Leader>ti <CMD>StartTableInsert<CR>
-
-  " \tr to resize column at cursor
-  nnoremap <silent> <Leader>tr <CMD>ResizeTableColumn<CR>
-
-  " \tc to select current paragraph-cell
-  nnoremap <silent> <Leader>tc <CMD>SelectCursorParaCell<CR>
-  vnoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
-  onoremap <silent> <Leader>tc :<C-U>SelectCursorParaCell<CR>
-
-  " \tC to select current column
-  nnoremap <silent> <Leader>tC <CMD>SelectTableColumn<CR>
-  vnoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
-  onoremap <silent> <Leader>tC :<C-U>SelectTableColumn<CR>
-
-  " \tR to select current paragraph-row
-  nnoremap <silent> <Leader>tR <CMD>SelectTableParaRow<CR>
-  vnoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
-  onoremap <silent> <Leader>tR :<C-U>SelectTableParaRow<CR>
-
-  " \th to goto the left paragraph-cell
-  nnoremap <silent> <Leader>th <CMD>call GotoRelParaCell(0, -1)<CR>
-  " \tj to goto the below paragraph-cell
-  nnoremap <silent> <Leader>tj <CMD>call GotoRelParaCell(1, 0)<CR>
-  " \tk to goto the above paragraph-cell
-  nnoremap <silent> <Leader>tk <CMD>call GotoRelParaCell(-1, 0)<CR>
-  " \tl to goto the right paragraph-cell
-  nnoremap <silent> <Leader>tl <CMD>call GotoRelParaCell(0, 1)<CR>
-  " \t\t to goto the right paragraph-cell
-  nnoremap <silent> <Leader>t<Leader>t <CMD>call GotoRelParaCell(0, 0)<CR>
-
   " dispatch for pear-tree compatibility
-  inoremap <silent><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_insert_mode_return() : "\<Plug>(PearTreeExpand)"
-  inoremap <silent><expr> <BS> <SID>in_table(getline('.')) ? <SID>table_insert_mode_backspace() : "\<Plug>(PearTreeBackspace)"
+  inoremap <silent><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
+  inoremap <silent><expr> <BS> <SID>in_table(getline('.')) ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
 endfunction
 
 function! s:config_telescope_mappings()
@@ -131,14 +96,14 @@ function! s:config_leader_mappings()
   nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
   " \h to toggle highlighted search
   "   with table dispatch
-  nnoremap <silent><expr> <Leader>h <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(0, -1)<CR>' : '<CMD>set hlsearch!<cr>'
+  nmap <silent><expr> <Leader>h <SID>in_table(getline('.')) ? '<Plug>(TableLeftCell)' : '<CMD>set hlsearch!<cr>'
   " \j to goto the below paragraph-cell
-  nnoremap <silent><expr> <Leader>j <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(1, 0)<CR>' : 'j'
+  nmap <silent><expr> <Leader>j <SID>in_table(getline('.')) ? '<Plug>(TableDownCell)' : 'j'
   " \k to goto the above paragraph-cell
-  nnoremap <silent><expr> <Leader>k <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(-1, 0)<CR>' : 'k'
+  nmap <silent><expr> <Leader>k <SID>in_table(getline('.')) ? '<Plug>(TableUpCell)' : 'k'
   " \l to toggle colour line
   "   with table dispatch
-  nnoremap <silent><expr> <Leader>l <SID>in_table(getline('.')) ? '<CMD>call GotoRelParaCell(0, 1)<CR>' : '<CMD>setl cul!<CR>'
+  nmap <silent><expr> <Leader>l <SID>in_table(getline('.')) ? '<Plug>(TableRightCell)' : '<CMD>setl cul!<CR>'
   " \L to toggle visible whitespace
   nnoremap <silent> <Leader>L <CMD>setl list!<CR>
   " \z to toggle goyo mode
@@ -614,38 +579,6 @@ augroup END
 " ========
 " Commands
 " ========
-
-" SelectCursorParaCell
-"   select the paragraph-cell in the table containing the cursor
-command! SelectCursorParaCell call SelectCursorParaCell()
-
-" SelectTableColumn
-"   select the paragraph-cell in the table containing the cursor
-command! SelectTableColumn call SelectTableColumn()
-
-" SelectTableParaRow
-"   select the paragraph-cell in the table containing the cursor
-command! SelectTableParaRow call SelectTableParaRow()
-
-" StartTableInsert
-"   start replace mode at beginning of paragraph-cell
-command! StartTableInsert call StartTableInsert()
-
-" FormatTable
-"   format table to width of current line
-command! FormatTable call FormatTable()
-
-" ResizeTableColumn
-"   resize table column to prompted width at cursor
-command! ResizeTableColumn call ResizeTableColumn()
-
-" InsertColumn
-"   insert column of specified width at the end of the table
-command! -nargs=1 InsertColumn call InsertColumn(<args>)
-
-" InsertRow
-"   insert row at the end of the table
-command! InsertRow call InsertRow()
 
 " CopyCWDToClipboard
 "   copy current working directory to clipboard

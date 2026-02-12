@@ -4,6 +4,7 @@
 nvim/*
 !nvim/init.vim
 !nvim/table.vim
+!nvim/table2.vim
 !nvim/autoload
 !nvim/autoload/plug.vim
 !mpv

@@ -89,6 +89,8 @@ function! s:config_telescope_mappings()
   nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
   " \em to pick a mark
   nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
+  " \ez to fuzzy find in the current buffer
+  nnoremap <silent> <Leader>ez <CMD>Telescope current_buffer_fuzzy_find<CR>
 endfunction
 
 function! s:config_leader_mappings()

@@ -1,607 +1,686 @@
 " File: table.vim
 " Author: chrysplusplus
-" Description: Inspired by tables in vimwiki but adapted to my own specialist
-" use, see below. Table rows (known internally as paragraph-rows) are
-" separated; any lines that aren't separated are considered part of the same
-" paragraph-row.
+" Description: Create tables with wrapping cell text
 "
-" |--------------|--------------|--------------|
-" | row 1, col 1 | row 1, col 2 | row 1, col 3 |
-" |--------------|--------------|--------------|
-" | row 2, col 1 | row 2, col 2 | row 2, col 3 |
-" |              |              | extended     |
-" |--------------|--------------|--------------|
-" | row 3, col 1 | row 3, col 2 | row 3, col 3 |
-" |--------------|--------------|--------------|
+" Inspired by tables in vimwiki and other projects, but adapted to my own
+" needs. Rather then every line being a row of the table, rows are separated
+" clearly and columns wrap text according to their widths — just like the wrap
+" text feature in popular spreadsheet programs. (This is not a spreadsheet
+" package.)
+"
+" Example table:
+"
+" |--------------|--------------|--------------------------------------|
+" | row 1, col 1 | row 1, col 2 | row 1, col 3                         |
+" |--------------|--------------|--------------------------------------|
+" | row 2, col 1 | row 2, col 2 | row 2, col 3                         |
+" |              |              |                                      |
+" |              |              | second paragraph                     |
+" |--------------|--------------|--------------------------------------|
+" | row 3, col 1 | row 3, col 2 | row 3, col 3                         |
+" |--------------|--------------|--------------------------------------|
 "
 " Lots of features to come to bring this implementation in-line with vimwiki's
 "
 " See https://github.com/vimwiki/vimwiki for original inspiration
-
-" =========
-" Functions
-" =========
+"
+" See https://github.com/chrysplusplus/linux_config for an example
+" configuration using this script.
+"
+" Usage:
+"
+" To use this script, source it from your initrc; no need for a plugin
+" manager.
+"
+" To create a table, open a file and type the following line (without the
+" leading comment mark and indentation, of course):
+"
+" |10|10|10|
+"
+" This is called a make string. Note that there is no whitespace at the end of
+" the line. When you hit Enter (or if you exit insert mode on the same line),
+" the script will replace this line with a table that looks like this:
+"
+" |------------|------------|------------|
+" | #          |            |            |
+" |------------|------------|------------|
+"
+" Where '#' represents the cursor position. When you type a make string and
+" hit Enter, the script positions your cursor so that you can immediately
+" start typing in the table. Unlike other table scripts, if you hit Enter
+" while typing in a cell, it won't move your cursor down to the next row, but
+" rather will split the line at the cursor and move the rest of the line down
+" to the next line, expanding the table as necessary. For example, if I have
+" the following table ('#' once again representing the cursor position):
+"
+" |------------|------------|------------|
+" | one line   | two#lines  |            |
+" |------------|------------|------------|
+"
+" When I hit Enter, it results in the following:
+"
+" |------------|------------|------------|
+" | one line   | two        |            |
+" |            |#lines      |            |
+" |------------|------------|------------|
+"
+" If we exit insert mode at this point, the table will look like it did before
+" we hit Enter. This is because the formatting wraps the text of each
+" paragraph in the cell. If we hit Enter again, we get:
+"
+" |------------|------------|------------|
+" | one line   | two        |            |
+" |            |            |            |
+" |            |#lines      |            |
+" |------------|------------|------------|
+"
+" Now that "two" and "lines" are separated by a blank line (i.e. there is
+" nothing between the pipes '|' others than spaces), they are considered
+" separated paragraphs. So, when we format the table (either by leaving insert
+" mode, or if auto formatting is disabled by calling the FormatTable command),
+" the blank line is kept.
+"
+" We can get back to the initial table by backspacing twice and then typing a
+" space. Try it for yourself. When the cursor is at the beginning of the text
+" area for a table column and we hit the backspace, the script joins the
+" current line with the previous line in the table column, just like you'd
+" expect when typing text outside of the table.
+"
+" This behaviour seems to be unique to this script. Most scripts implementing
+" markdown-like tables in vim would see this as a table with three columns, no
+" header, and three rows; whereas this script sees a table with three columns
+" and one row.
+"
+" Going on from here, you can insert rows and columns using the InsertRow and
+" InsertColumn commands respectively. The ResizeTableColumn command can be
+" used to change the width of columns in the table, but you can also edit the
+" first of the table to achieve the same effect.
+"
+" Happy writing!
+"
+" This behaviour of this script can be customised with the following
+" variables:
+"
+" Customisation Variable: g:table_auto_format, b:table_auto_format
+"
+" If non-zero, the script auto-formats tables when leaving insert mode. Can be
+" also enabled for individual buffers by setting b:table_auto_format
+"
+" Defaults to 1
+"
+" Customisation Variable: g:table_inhibit_leader_keys
+"
+" If non-zero, the script will not map leader keys for table operations, which
+" may be desired if the mappings would conflict, or the user wants to use
+" custom mappings. See the Mappings section for which plug keys are available.
+" These can be mapped as follows:
+"
+" :nmap tti <Plug>(TableCellInsert)
+"
+" This would map 'tti' to enter insert mode at the end of text in the table
+" cell under the cursor.
+"
+" Defaults to 0
+"
+" Customisation Variable: g:table_inhibit_text_objects
+"
+" If non-zero, the script will not map keys for table text objects, which may
+" be desired if the mappings would conflict, or the user wants to use custom
+" mappings. See the Mappings section for which text objects are available. It
+" is recommended to create mappings for all three modes, for example:
+"
+" :nnoremap ttic <Plug>(TableSelectCell)
+" :vnoremap ic <Plug>(VTableSelectCell)
+" :onoremap ic <Plug>(OTableSelectCell)
+"
+" This would map 'ttic' in normal mode to select the table cell under the
+" cursor in visual-block mode, enter this selection in visual mode, and use
+" the selection when an operator is pending (for example, 'dic' would be
+" mapped to block delete the table cell.)
+"
+" Please note the prefix on each plug key. Normal mode mappings don't use a
+" prefix, but visual mode and operator mode mappings use V and O respectively.
+" It would be incorrect to map a plug key in the wrong mode, as this could
+" have unintended side-effects and unknown behaviour. Please take care when
+" mapping keys in vim.
+"
+" Defaults to 0
 
 " regex patterns used for tables
 let s:table_pattern = '^|.*|$'
 let s:table_sep_pattern = '^|\(-*|\)\+$'
 let s:table_make_pattern = '^|\(\d\+|\)\+$'
-let s:table_line_end_pattern = '\(| \)\?\zs\s\{2,}'
-
-" s:get_table_info(bufnr, linenr)
-"   return table information around a line in a buffer
-"   table information contains:
-"     bufnr: the buffer containing the table
-"     first_linenr: first line of the table
-"     last_linenr: last line of the table
-"     first_row_separator_linenr: line containing first row separator
-"     cols: list of column widths, assuming table is correctly formatted
-function! s:get_table_info(bufnr, linenr) "-> {bufnr, firstlnr, lastlnr, firstsep, [cols]}
-  let lines = getbufline(a:bufnr, 1, '$')
-  let current_line = lines[a:linenr - 1]
-
-  let LineIndexInTable = {index -> match(lines[index], s:table_pattern) == 0}
-
-  if match(current_line, s:table_pattern) == -1
-    return {}
-  endif
-
-  let first_index = -1
-  for index in range(a:linenr - 1, 1, -1) " adjust linenr -> index
-    if !LineIndexInTable(index)
-      let first_index = index + 1
-      break
-    endif
-  endfor
-
-  if first_index == -1
-    let first_index = 0
-  endif
-
-  let last_index = -1
-  for index in range(a:linenr - 1, len(lines) - 1)
-    if !LineIndexInTable(index)
-      let last_index = index - 1
-      break
-    endif
-  endfor
-
-  if last_index == -1
-    let last_index = len(lines) - 1
-  endif
-
-  let LineIndexIsRowSeparator = {index -> match(lines[index], s:table_sep_pattern) == 0}
-
-  let first_row_separator_index = -1
-  for index in range(first_index, last_index)
-    if LineIndexIsRowSeparator(index)
-      let first_row_separator_index = index
-      break
-    endif
-  endfor
-
-  if first_row_separator_index == -1
-    return {} " table MUST have at least one row separator
-  endif
-
-  let table_cols = map(split(lines[first_row_separator_index], '|'), {_,txt -> strcharlen(txt) - 2})
-
-  let table_info = {}
-  let table_info.bufnr = a:bufnr
-  let table_info.first_linenr = first_index + 1
-  let table_info.last_linenr = last_index + 1
-  let table_info.first_row_separator_linenr = first_row_separator_index + 1
-  let table_info.cols = table_cols
-  return table_info
-endfunction
-
-" s:get_table_pararow_heights(table_info)
-"   return list of heights of paragraph-rows in a table
-function! s:get_table_pararow_heights(table_info) "-> [height]
-  let lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
-  let row_boundaries = copy(lines)->map({idx,line -> match(line, s:table_sep_pattern) == 0 ? idx : -1})->filter({_,v -> v != -1})
-  call insert(row_boundaries, -1, 0)
-  call add(row_boundaries, len(lines))
-
-  let heights = []
-  for index in range(0, len(row_boundaries) - 2)
-    let boundary_start = row_boundaries[index]
-    let boundary_end = row_boundaries[index + 1]
-    let height = boundary_end - boundary_start - 1
-    call add(heights, height != -1 ? height: 0)
-  endfor
-
-  return heights
-endfunction
-
-" s:get_cursor_table_column(table_info, linenr, columnnr)
-"   return column index of cursor in a table
-function! s:get_cursor_table_column(table_info, linenr, columnnr) "-> index
-  if empty(a:table_info)
-    return -1
-  endif
-
-  let column_index = 0
-  let max_column_index = len(a:table_info.cols) - 1
-  let separator_offset = 1
-  while column_index <= max_column_index
-    let column_width = a:table_info.cols[column_index]
-    let separator_offset = separator_offset + column_width + 3
-    if a:columnnr < separator_offset
-      return column_index
-    endif
-
-    let column_index = column_index + 1
-  endwhile
-
-  return max_column_index
-endfunction
-
-" s:get_cursor_table_pararow(cursor)
-"   return paragraph-row index of cursor in a table
-function! s:get_cursor_table_pararow(table_info, linenr) "-> index
-  if empty(a:table_info)
-    return -1
-  endif
-
-  let table_lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:linenr)
-  let index = 0
-  let max_index = len(table_lines) - 1
-  let separator_line_count = 0
-  while index <= max_index
-    let current_line = table_lines[index]
-    if match(current_line, s:table_sep_pattern) == 0
-      let separator_line_count = separator_line_count + 1
-    endif
-
-    let index = index + 1
-  endwhile
-
-  return separator_line_count
-endfunction
-
-" s:get_table_column_bounds(table_info, column_index)
-"   return the start and end of the text boundary for a column of a table
-"   return [-1,-1] if column has no text boundary
-function! s:get_table_column_bounds(table_info, column_index) "-> [startcol, endcol]
-  if assert_true(a:column_index < len(a:table_info.cols), 'column index out-of-bounds')
-    return [-1,-1]
-  endif
-
-  let separator_offset = 1
-  let current_col_index = 0
-  while current_col_index < a:column_index
-    let separator_offset = separator_offset + a:table_info.cols[current_col_index] + 3
-    let current_col_index = current_col_index + 1
-  endwhile
-
-  let colnr_first = separator_offset + 2
-  let colnr_last = separator_offset + a:table_info.cols[a:column_index] + 1
-
-  " if column width is negative, which can happen when two column separators
-  " are adjacent, the calculations break; but we can detect this by checking
-  " if the last column is less than the first, in which case we'll early
-  " return an invalid bound
-  if colnr_last <= colnr_first
-    return [-1, -1]
-  endif
-
-  return [colnr_first, colnr_last]
-endfunction
-
-" not for exported use
-" TODO maybe remove and replace usage with row heights
-" so the same algorithm can be used for columns and rows
-function! s:get_table_row_separators(lines, first_linenr) "-> [linenr]
-  let separator_linenrs = []
-  let index = 0
-  let max_index = len(a:lines) - 1
-  while index <= max_index
-    if match(a:lines[index], s:table_sep_pattern) == 0
-      call add(separator_linenrs, a:first_linenr + index)
-    endif
-    let index = index + 1
-  endwhile
-
-  return separator_linenrs
-endfunction
-
-" s:get_table_pararow_info(table_info, para_index)
-"   return information for a paragraph-cell text boundary of a table
-"   information Dictionary contains:
-"     before_sep_linenr: line number for the previous row separator, or -1
-"     after_sep_linenr:  line number for the next row separator, or -1
-"     text_start_linenr: line number for the text start, or -1
-"     text_end_linenr:   line number for the text end, or -1
-"   return empty Dictionary if para_index is out of bounds
-function! s:get_table_pararow_info(table_info, para_index) "-> {before_sep, after_sep, txt_start, txt_end}
-  let table_lines = getbufline(a:table_info.bufnr, a:table_info.first_linenr, a:table_info.last_linenr)
-  let separator_linenrs = s:get_table_row_separators(table_lines, a:table_info.first_linenr)
-
-  if a:para_index < 0
-    return {}
-  elseif a:para_index > len(separator_linenrs)
-    return {}
-  endif
-
-  if len(separator_linenrs) == 0
-    return {}
-  endif
-
-  if a:para_index == 0 && separator_linenrs[0] == a:table_info.first_linenr
-    let info = {}
-    let info.before_sep_linenr = -1
-    let info.after_sep_linenr = separator_linenrs[0]
-    let info.text_start_linenr = -1
-    let info.text_end_linenr = -1
-    return info
-  endif
-
-  if a:para_index == 0
-    let info = {}
-    let info.before_sep_linenr = -1
-    let info.after_sep_linenr = separator_linenrs[0]
-    let info.text_start_linenr = a:table_info.first_linenr
-    let info.text_end_linenr = separator_linenrs[0] - 1
-    return info
-  endif
-
-  let last_sep_linenr = separator_linenrs[len(separator_linenrs) - 1]
-  if a:para_index == len(separator_linenrs) && last_sep_linenr == a:table_info.last_linenr
-    let info = {}
-    let info.before_sep_linenr = last_sep_linenr
-    let info.after_sep_linenr = -1
-    let info.text_start_linenr = -1
-    let info.text_end_linenr = -1
-    return info
-  endif
-
-  if a:para_index == len(separator_linenrs)
-    let info = {}
-    let info.before_sep_linenr = last_sep_linenr
-    let info.after_sep_linenr = -1
-    let info.text_start_linenr = last_sep_linenr + 1
-    let info.text_end_linenr = a:table_info.last_linenr
-    return info
-  endif
-
-  let before_sep_linenr = separator_linenrs[a:para_index - 1]
-  let after_sep_linenr = separator_linenrs[a:para_index]
-  if before_sep_linenr + 1 == after_sep_linenr
-    let info = {}
-    let info.before_sep_linenr = before_sep_linenr
-    let info.after_sep_linenr = after_sep_linenr
-    let info.text_start_linenr = -1
-    let info.text_end_linenr = -1
-    return info
-  endif
-
-  let info = {}
-  let info.before_sep_linenr = before_sep_linenr
-  let info.after_sep_linenr = after_sep_linenr
-  let info.text_start_linenr = before_sep_linenr + 1
-  let info.text_end_linenr = after_sep_linenr - 1
-  return info
-endfunction
-
-" s:get_paracell_selection(table_info, row, col)
-"   return [start_linenr, start_colnr, end_linenr, end_colnr]
-"   return empty list for invalid selections
-"   not for exported use
-function! s:get_paracell_selection(table_info, row, col) "-> [startlnr, startcol, endlnr, endcol]
-  let row_heights = s:get_table_pararow_heights(a:table_info)
-  if assert_true(a:row >= 0 && a:row < len(row_heights), "row out-of-bounds")
-    return []
-  elseif assert_true(a:col >= 0 && a:col < len(a:table_info.cols), "col out-of-bounds")
-    return []
-  endif
-
-  let ExtractParaInfoStartEnd = {info -> [info.text_start_linenr, info.text_end_linenr]}
-
-  let [colnr_first, colnr_last] = s:get_table_column_bounds(a:table_info, a:col)
-  if colnr_first == -1
-    return []
-  endif
-
-  let [linenr_first, linenr_last] = ExtractParaInfoStartEnd(s:get_table_pararow_info(a:table_info, a:row))
-  if linenr_first == -1
-    return []
-  endif
-
-  return [linenr_first, colnr_first, linenr_last, colnr_last]
-endfunction
-
-" s:use_selection(selection)
-"   enter visual block mode to selection
-"   selection should be a list of four numbers
-function! s:use_selection(selection) abort
-  let [linenr_first, colnr_first, linenr_last, colnr_last] = a:selection
-  call setcharpos('.', [0, linenr_last, colnr_last, 0, colnr_last])
-  execute "normal! \<C-V>"
-  call setcharpos('.', [0, linenr_first, colnr_first, 0, colnr_first])
-endfunction
-
-" SelectCursorParaCell()
-"   select the paragraph-cell in the table containing the cursor
-function! SelectCursorParaCell()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
-  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
-  let row = s:get_cursor_table_pararow(table_info, linenr)
-  let selection = s:get_paracell_selection(table_info, row, col)
-  if !empty(selection)
-    call s:use_selection(selection)
-  endif
-endfunction
-
-" SelectTableColumn()
-"   select the table column containing the cursor, including the following
-"   column separator
-function! SelectTableColumn()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
-  let column_index = s:get_cursor_table_column(table_info, linenr, columnnr)
-  let [colnr_first, colnr_last] = s:get_table_column_bounds(table_info, column_index)
-  if colnr_first == -1
-    return
-  endif
-
-  call s:use_selection([table_info.first_linenr, colnr_first, table_info.last_linenr, colnr_last])
-endfunction
-
-" SelectTableParaRow()
-"   select the paragraph-row of the table containing the cursor
-function! SelectTableParaRow()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
-  let row = s:get_cursor_table_pararow(table_info, linenr)
-  let row_info = s:get_table_pararow_info(table_info, row)
-  if row_info.text_start_linenr == -1
-    return
-  endif
-
-  let linenr_first = row_info.text_start_linenr
-  let linenr_last = row_info.text_end_linenr
-  let table_width = len(getbufoneline(table_info.bufnr, linenr_first))
-  call s:use_selection([linenr_first, 1, linenr_last, table_width])
-endfunction
-
-" s:list_slice(l, first, last)
-"   TODO change to use internal vim function
-"   return a copy of l containg the elements between first and last
-function! s:list_slice(l, first, last) "-> List
-  let result = []
-  for index in range(a:first, a:last)
-    call add(result, a:l[index])
-  endfor
-  return result
-endfunction
-
-" s:transpose(list_of_lists, sublist_len, default)
-"   return transposed list of lists, sublist_len is a number that specifies
-"   the maximum length of a sublist, default is the default value if index is
-"   not found
-function! s:transpose(list_of_lists, sublist_len, default) "-> List[List]
-  if empty(a:list_of_lists)
-    return a:list_of_lists
-  endif
-
-  let transposed = []
-  for index in range(a:sublist_len)
-    let new_elem = []
-    for sublist in a:list_of_lists
-      call add(new_elem, get(sublist, index, a:default))
-    endfor
-    call add(transposed, new_elem)
-  endfor
-  return transposed
-endfunction
-
-" s:wrap_text(lines, width)
-"   return list of lines of paragraph lines wrapped to width
-"   any blank lines are interpreted as paragraph breaks, and so persist after
-"   wrapping
-function! s:wrap_text(lines, width) "-> [line]
-  let paragraphs = []
-  let current_paragraph = ''
-  for line in a:lines
-    if empty(line)
-      call add(paragraphs, current_paragraph)
-      call add(paragraphs, '') " use empty string to represent paragraph break
-      let current_paragraph = ''
-      continue
-    endif
-
-    if empty(current_paragraph)
-      let current_paragraph = line
-    else
-      let current_paragraph = join([current_paragraph, line])
-    endif
-  endfor
-
-  if !empty(current_paragraph)
-    call add(paragraphs, current_paragraph)
-  endif
-
-  call map(paragraphs, {_,paragraph -> empty(paragraph) ? paragraph : split(paragraph)})
-  call flatten(paragraphs)
-
-  let lines = []
-  let current_line = ''
-  let is_new_paragraph = 0
-  for word in paragraphs
-    if empty(word) && empty(current_line)
-      let is_new_paragraph = 1
-      continue
-    elseif empty(word)
-      call add(lines, current_line)
-      let current_line = ''
-      let is_new_paragraph = 1
-      continue
-    endif
-
-    if is_new_paragraph
-      call add(lines, '')
-      let is_new_paragraph = 0
-    endif
-
-    if len(word) + len(current_line) + 1 > a:width
-      call add(lines, current_line)
-      let current_line = word
-    elseif empty(current_line)
-      let current_line = word
-    else
-      let current_line = join([current_line, word])
-    endif
-  endfor
-
-  if !empty(current_line)
-    call add(lines, current_line)
-  endif
-
-  " ensure that empty rows are preserved
-  if empty(lines)
-    return ['']
-  endif
-
-  return lines
-endfunction
-
-" s:make_table_row_separators_and_format_string(cols)
-"   return row_separator and format string
-function! s:make_table_row_separators_and_format_string(cols) "-> [row_sep, row_fmt_str]
-  let row_separator = '|'
-  let row_format_string = '|'
-  for column_width in a:cols
-    let row_separator = row_separator .. repeat('-', column_width + 2) .. '|'
-    let row_format_string = row_format_string .. ' %-' .. column_width .. 'S |'
-  endfor
-  return [row_separator, row_format_string]
-endfunction
-
-" s:make_table()
-"   create a new table from pattern
-function! s:make_table()
-  let bufnr = bufnr()
-  let linenr = line('.')
-  let current_line = getbufoneline(bufnr, linenr)
-  let widths = map(split(current_line, '|'),
-        \ {_,width -> max([str2nr(width), s:min_column_width])})
-
-  let [row_separator, format_string] = s:make_table_row_separators_and_format_string(widths)
-
-  let new_lines = []
-  call add(new_lines, row_separator)
-  call add(new_lines, substitute(row_separator, '-', ' ', 'g'))
-  call add(new_lines, row_separator)
-
-  call deletebufline(bufnr, linenr)
-  call appendbufline(bufnr, linenr - 1, new_lines)
-  call setcharpos('.', [0, linenr + 1, 3, 0, 3])
-endfunction
-
-" s:format_table(table_info)
-"   format a table, wrapping paragraph-cells based of the width of the first
-"   row separator
-function! s:format_table(table_info)
-  let l:table_info = a:table_info
-  let lines = getbufline(table_info.bufnr, table_info.first_linenr, table_info.last_linenr)
-
-  let row_boundaries = []
-  call add(row_boundaries, table_info.first_linenr - 1)
-  call extend(row_boundaries, s:get_table_row_separators(lines, table_info.first_linenr))
-  call add(row_boundaries, table_info.last_linenr + 1)
-
-  let row_contents = []
-  for boundary_index in range(len(row_boundaries) - 1)
-    let first_index = row_boundaries[boundary_index] - table_info.first_linenr + 1
-    let last_index = row_boundaries[boundary_index + 1] - table_info.first_linenr - 1
-    call add(row_contents, s:list_slice(lines, first_index, last_index))
-  endfor
-
-  for row in row_contents
-    call map(row, {_,line -> split(line, "|")})
-    for split_line in row
-      call map(split_line, {_,column_text -> trim(column_text)})
-    endfor
-  endfor
-
-  call map(row_contents, {_,row -> s:transpose(row, len(table_info.cols), '')})
-
-  let line_counts = []
-  for row in row_contents
-    call map(row, {column_index,column -> s:wrap_text(column, table_info.cols[column_index])})
-    call add(line_counts, max(map(copy(row), {_,column -> len(column)})))
-  endfor
-
-  call map(row_contents, {row_index,row -> s:transpose(row, line_counts[row_index], '')})
-
-  let [row_separator, row_format_string] = s:make_table_row_separators_and_format_string(table_info.cols)
-  let Printf = function("printf", [row_format_string])
-  for row in row_contents
-    if !empty(row)
-      call map(row, {_,line -> call(Printf, line)})
-    endif
-  endfor
-
-  let lines = []
-  let last_index = len(row_contents) - 1
-  for index in range(len(row_contents))
-    let row = row_contents[index]
-    if !empty(row)
-      call extend(lines, row)
-    endif
-    if index != last_index
-      call add(lines, row_separator)
-    endif
-  endfor
-
-  call deletebufline(table_info.bufnr, table_info.first_linenr, table_info.last_linenr)
-  call appendbufline(table_info.bufnr, table_info.first_linenr - 1, lines)
-endfunction
-
-" FormatTable()
-"   format the table at the cursor
-function! FormatTable()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
-  call s:format_table(table_info)
-  call setcharpos('.', [0, linenr, columnnr, 0, columnnr])
-endfunction
 
 let s:min_column_width = 5
 
-" ResizeTableColumn()
-"   prompt user to change the column width of the current table column
-function! ResizeTableColumn()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
+" ===================
+" Vim Interaction API
+" ===================
+
+function! s:au_insert_leave()
+  " callback for InsertLeave autocommand
+  if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
+    return
+  elseif get(b:, "table_working", 0)
     return
   endif
 
-  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
+  let current_line = getline('.')
+  if s:matches(current_line, s:table_make_pattern)
+    let b:table_working = 1
+    call s:plug_make()
+  elseif s:matches(current_line, s:table_pattern)
+    call s:format_table_at_cursor()
+  endif
+endfunction
 
-  call inputsave()
-  let usr_column_width = str2nr(input("Column Width: ", table_info.cols[col]))
-  call inputrestore()
-  if usr_column_width < s:min_column_width
+function! s:imap_return() "-> mapping
+  " key mapping evaluator for CR
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+
+  if s:matches(line, s:table_make_pattern)
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TableMake)i"
+  elseif colnr == 1
+    return "\<CR>"
+  elseif colnr == strcharlen(line) + 1
+    return "\<CR>"
+  elseif linenr == 1
+    return "\<CR>"
+  elseif ! s:matches(getline(linenr + 1), s:table_pattern)
+    return "\<CR>"
+  elseif s:matches(line, s:table_sep_pattern)
+    return "\<Esc>\<Plug>(TableThisCell)i"
+  elseif s:matches(line, s:table_pattern)
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TableSplitLine)i"
+  else
+    return "\<CR>"
+  endif
+endfunction
+
+function! s:imap_tab() "-> mapping
+  " key mapping evaluator for Tab
+  let current_line = getline('.')
+  if s:matches(current_line, s:table_pattern)
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TableNextCell)i"
+  else
+    return "\<Tab>"
+  endif
+endfunction
+
+function! s:imap_stab() "-> mapping
+  " key mapping evaluator for S-Tab
+  let current_line = getline('.')
+  if s:matches(current_line, s:table_pattern)
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TablePrevCell)i"
+  else
+    return "\<S-Tab>"
+endfunction
+
+function! s:imap_backspace() "-> mapping
+  " key mapping evaluator for Backspace
+  let linenr = line('.')
+  let line = getline(linenr)
+  if s:matches(line, s:table_make_pattern)
+    return "\<BS>"
+  elseif s:matches(line, s:table_sep_pattern)
+    return "\<BS>"
+  elseif linenr == 1
+    return "\<BS>"
+  elseif ! s:matches(getline(linenr - 1), s:table_pattern)
+    return "\<BS>"
+  elseif s:matches(line, s:table_pattern) && s:is_cursor_at_col_start()
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TableJoinLine)i"
+  else
+    return "\<BS>"
+endfunction
+
+function! s:nmap_left_curly() "-> mapping
+  " key mapping for {
+  let line = getline('.')
+  if s:matches(line, s:table_pattern)
+    return "\<Plug>(TablePrevParagraph)"
+  else
+    return "{"
+  endif
+endfunction
+
+function! s:nmap_right_curly() "-> mapping
+  " key mapping for }
+  let line = getline('.')
+  if s:matches(line, s:table_pattern)
+    return "\<Plug>(TableNextParagraph)"
+  else
+    return "}"
+  endif
+endfunction
+
+function! s:plug_make()
+  " handler for make operation
+  let linenr = line('.')
+  let cols = split(getline('.'), '|')
+  let line = s:line_from_cols(cols)
+  let sep = substitute(line, ' ', '-', 'g')
+
+  call setline(linenr, sep)
+  call append(linenr, [line, sep])
+  call setcursorcharpos(linenr + 1, 3)
+
+  unlet b:table_working
+endfunction
+
+function! s:plug_this_cell()
+  " handler for this_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  let next_bot_sep = s:find_next_sep(linenr)
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let new_linenr = s:find_prev_non_empty_by_col_idx(next_bot_sep, col_idx)
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+endfunction
+
+function! s:plug_next_cell()
+  " handler for next_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  let next_col_idx = s:col_idx_from_line(current_line, colnr) + 1
+
+  if next_col_idx > s:max_col_idx_from_line(current_line)
+    let next_col_idx = 0
+    let this_bot_sep = s:find_next_sep(linenr)
+    let next_bot_sep = s:find_next_sep(this_bot_sep)
+  else
+    let next_bot_sep = s:find_next_sep(linenr)
+  endif
+
+  if next_bot_sep == -1
+    let last_sep = s:find_last_sep(linenr)
+    let cols = s:cols_on_line(linenr)
+    let line = s:line_from_cols(cols)
+    let sep = substitute(line, ' ', '-', 'g')
+    call append(last_sep, [line, sep])
+    call setcursorcharpos(last_sep + 1, 3)
+  else
+    let new_linenr = s:find_prev_non_empty_by_col_idx(next_bot_sep, next_col_idx)
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_end(next_col_idx)
+  endif
+
+  if exists("b:table_working")
+    unlet b:table_working
+  endif
+endfunction
+
+function! s:plug_prev_cell()
+  " handler for prev_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  let prev_col_idx = s:col_idx_from_line(current_line, colnr) - 1
+
+  if prev_col_idx < 0
+    let prev_col_idx = s:max_col_idx_from_line(current_line)
+    let prev_bot_sep = s:find_prev_sep(linenr)
+  else
+    let prev_bot_sep = s:find_next_sep(linenr)
+  endif
+
+  if prev_bot_sep != s:find_first_sep(linenr)
+    let new_linenr = s:find_prev_non_empty_by_col_idx(prev_bot_sep, prev_col_idx)
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_end(prev_col_idx)
+  else
+    " prevent the cursor from wandering when it repeated leaves insert mode
+    call setcursorcharpos(linenr, colnr + 1)
+  endif
+
+  if exists("b:table_working")
+    unlet b:table_working
+  endif
+endfunction
+
+function! s:plug_split_line()
+  " handler for split_line operation
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  let col_idx = s:col_idx_from_line(current_line, colnr)
+
+  let header = s:find_first_sep(linenr)
+  if header == linenr
+    call s:maybe_unlet_b_table_working()
+    return
+  elseif col_idx > s:max_col_idx_from_line(getline(header))
+    call s:maybe_unlet_b_table_working()
+    return
+  endif
+
+  let column_width = s:cols_on_line(header)[col_idx]
+  let format_string = ' %-' .. column_width .. 'S '
+
+  let byte = byteidx(current_line, colnr - 1)
+  let [before_text, after_text] = s:split_col_text(current_line, byte)
+  let before_text = printf(format_string, trim(before_text))
+  let after_text = printf(format_string, trim(after_text))
+
+  call s:change_col_text(linenr, col_idx, before_text)
+  let next_linenr = linenr + 1
+  let next_text = after_text
+  while ! s:matches(getline(next_linenr), s:table_sep_pattern)
+    let old_text = s:col_text_on_line(next_linenr, col_idx)
+    call s:change_col_text(next_linenr, col_idx, next_text)
+    let next_text = old_text
+    let next_linenr += 1
+  endwhile
+
+  if ! empty(trim(next_text)) || linenr + 1 == next_linenr
+    let split_line = split(substitute(getline(next_linenr), '-', ' ', 'g'), '|')
+    let split_line[col_idx] = next_text
+    call append(next_linenr - 1, '|' .. join(split_line, '|') .. '|')
+  endif
+
+  call setcursorcharpos(linenr + 1, 0)
+  call s:move_cursor_to_col_text_start(col_idx)
+  call s:maybe_unlet_b_table_working()
+endfunction
+
+function! s:plug_join_line()
+  " handler for join_line operation
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  let col_idx = s:col_idx_from_line(current_line, colnr)
+
+  let header = s:find_first_sep(linenr)
+  if header == linenr
+    call s:maybe_unlet_b_table_working()
+    return
+  elseif col_idx > s:max_col_idx_from_line(getline(header))
+    call s:maybe_unlet_b_table_working()
+    return
+  endif
+
+  let column_width = s:cols_on_line(header)[col_idx]
+  let format_string = ' %-' .. column_width .. 'S '
+
+  call setcursorcharpos(linenr - 1, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+  let [restore_linenr, restore_colnr] = s:cursor_pos()
+
+  let prev_col_text = trim(s:col_text_on_line(linenr - 1, col_idx))
+  let this_col_text = trim(s:col_text_on_line(linenr, col_idx))
+  let new_text = printf(format_string, prev_col_text .. this_col_text)
+  call s:change_col_text(linenr - 1, col_idx, new_text)
+
+  let next_linenr = linenr + 1
+  while ! s:matches(getline(next_linenr), s:table_sep_pattern)
+    let col_text = s:col_text_on_line(next_linenr, col_idx)
+    call s:change_col_text(next_linenr - 1, col_idx, col_text)
+    let next_linenr += 1
+  endwhile
+
+  let column_width = len(s:col_text_on_line(next_linenr, col_idx))
+  call s:change_col_text(next_linenr - 1, col_idx, repeat(' ', column_width))
+
+  call setcursorcharpos(restore_linenr, restore_colnr)
+  call s:maybe_unlet_b_table_working()
+endfunction
+
+function! s:plug_cell_insert()
+  " handler for cell_insert operation
+   let [linenr, colnr] = s:cursor_pos()
+   let line = getline(linenr)
+   if ! s:matches(line, s:table_pattern)
+     return
+   endif
+
+   let col_idx = s:col_idx_from_line(line, colnr)
+   let bot_sep = s:find_next_sep(linenr)
+   let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
+   call setcursorcharpos(new_linenr, 0)
+   call s:move_cursor_to_col_text_end(col_idx)
+   startinsert
+endfunction
+
+function! s:plug_select_cell()
+  " handler for select_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let start_linenr = s:find_prev_sep(linenr) + 1
+  let end_linenr = s:find_next_sep(linenr) - 1
+  let start_byte = match(getline(start_linenr), '|', 0, col_idx + 1) + 2
+  let end_byte = match(getline(end_linenr), '|', 0, col_idx + 2) - 2
+
+  call setpos(".", [0, start_linenr, start_byte + 1, 0])
+  execute "normal" "\<C-v>"
+  call setpos(".", [0, end_linenr, end_byte + 1, 0])
+endfunction
+
+function! s:plug_select_col()
+  " handler for select_col operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let start_linenr = s:find_first_sep(linenr)
+  let end_linenr = s:find_last_sep(linenr)
+  let start_byte = match(getline(start_linenr), '|', 0, col_idx + 1) + 2
+  let end_byte = match(getline(end_linenr), '|', 0, col_idx + 2) - 2
+
+  call setpos(".", [0, start_linenr, start_byte + 1, 0])
+  execute "normal" "\<C-v>"
+  call setpos(".", [0, end_linenr, end_byte + 1, 0])
+endfunction
+
+function! s:plug_select_row()
+  " handler for select_row operation
+  let linenr = line('.')
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let start_linenr = s:find_prev_sep(linenr) + 1
+  let end_linenr = s:find_next_sep(linenr) - 1
+  let end_byte = len(getline(end_linenr))
+
+  call setpos(".", [0, start_linenr, 1, 0])
+  execute "normal" "\<C-v>"
+  call setpos(".", [0, end_linenr, end_byte, 0])
+endfunction
+
+function! s:plug_left_cell()
+  " handler for left_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, colnr)
+  if col_idx == 0
+    return
+  endif
+
+  let col_idx -= 1
+  let bot_sep = s:find_next_sep(linenr)
+  if bot_sep == -1
+    return
+  endif
+
+  let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
+
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+endfunction
+
+function! s:plug_right_cell()
+  " handler for right_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let bot_sep = s:find_next_sep(linenr)
+  if bot_sep == -1
+    return
+  endif
+
+  let max_col_idx = s:max_col_idx_from_line(getline(bot_sep))
+  if col_idx == max_col_idx
+    return
+  endif
+
+  let col_idx += 1
+  let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+endfunction
+
+function! s:plug_down_cell()
+  " handler for down_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let this_bot_sep = s:find_next_sep(linenr)
+  let last_sep = s:find_last_sep(this_bot_sep)
+  if this_bot_sep == last_sep
+    return
+  endif
+
+  let next_bot_sep = s:find_next_sep(this_bot_sep)
+  let new_linenr = s:find_prev_non_empty_by_col_idx(next_bot_sep, col_idx)
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+endfunction
+
+function! s:plug_up_cell()
+  " handler for up_cell operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let prev_sep = s:find_prev_sep(linenr)
+  let first_sep = s:find_first_sep(prev_sep)
+  if prev_sep == first_sep
+    return
+  endif
+
+  let new_linenr = s:find_prev_non_empty_by_col_idx(prev_sep, col_idx)
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+endfunction
+
+function s:plug_next_paragraph()
+  "handler for next_paragraph operation
+  let [cur_linenr, cur_colnr] = s:cursor_pos()
+  let line = getline(cur_linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, cur_colnr)
+  let end_linenr = s:find_next_sep(cur_linenr)
+  if end_linenr == -1
+    return
+  endif
+
+  let linenr = cur_linenr
+  while linenr + 1 != end_linenr
+    let is_this_line_blank = empty(trim(s:col_text_on_line(linenr, col_idx)))
+    let is_next_line_blank = empty(trim(s:col_text_on_line(linenr + 1, col_idx)))
+
+    if is_this_line_blank
+    elseif is_next_line_blank && linenr == cur_linenr
+      call setcursorcharpos(linenr, 0)
+      call s:move_cursor_to_col_text_end(col_idx)
+      let [_, new_colnr] = s:cursor_pos()
+      if new_colnr > cur_colnr
+        return
+      endif
+    elseif is_next_line_blank
+      break
+    endif
+
+    let linenr += 1
+  endwhile
+
+  call setcursorcharpos(linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
+endfunction
+
+function s:plug_prev_paragraph()
+  "handler for prev_paragraph operation
+  let [cur_linenr, cur_colnr] = s:cursor_pos()
+  let line = getline(cur_linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(line, cur_colnr)
+  let end_linenr = s:find_prev_sep(cur_linenr)
+  if end_linenr == -1 " TODO goto top of table instead of silently failing
+    return
+  endif
+
+  let linenr = cur_linenr
+  while linenr - 1 != end_linenr
+    let is_this_line_blank = empty(trim(s:col_text_on_line(linenr, col_idx)))
+    let is_prev_line_blank = empty(trim(s:col_text_on_line(linenr - 1, col_idx)))
+
+    if is_this_line_blank
+    elseif is_prev_line_blank && linenr == cur_linenr
+      call setcursorcharpos(linenr, 0)
+      call s:move_cursor_to_col_text_start(col_idx)
+      let [_, new_colnr] = s:cursor_pos()
+      if new_colnr < cur_colnr
+        return
+      endif
+    elseif is_prev_line_blank
+      break
+    endif
+
+    let linenr -= 1
+  endwhile
+
+  call setcursorcharpos(linenr, 0)
+  call s:move_cursor_to_col_text_start(col_idx)
+endfunction
+
+" =========
+" Functions
+" =========
+
+function! s:maybe_unlet_b_table_working()
+  " unset b:table_working if it was set
+  if exists("b:table_working")
+    unlet b:table_working
+  endif
+endfunction
+
+function! s:insert_col_at_cursor(column_width)
+  " insert a new column after the column containing the cursor
+  if a:column_width < s:min_column_width
     redraw
     echohl ErrorMsg
     echomsg "Invalid column width"
@@ -609,329 +688,555 @@ function! ResizeTableColumn()
     return
   endif
 
-  let table_info.cols[col] = usr_column_width
-  call s:format_table(table_info)
-endfunction
-
-" s:start_insert_in_table_cell(table_info, row, col)
-"   enter table insert mode for cell specified by row and col
-function! s:start_insert_in_table_cell(table_info, row, col)
-  let selection = s:get_paracell_selection(a:table_info, a:row, a:col)
-  if empty(selection)
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  if ! s:matches(current_line, s:table_pattern)
     return
   endif
 
-  let [start_linenr, start_colnr, end_linenr, end_colnr] = selection
-  let lines = getbufline(a:table_info.bufnr, start_linenr, end_linenr)
-  call map(lines,
-        \ {_,line -> trim(strcharpart(line, start_colnr - 1, end_colnr - start_colnr + 1))})
+  let col_idx = s:col_idx_from_line(current_line, colnr)
+  let first_sep = s:find_first_sep(linenr)
+  let last_sep = s:find_last_sep(linenr)
 
-  for idx in range(len(lines) - 1, 0, -1)
-    let line = lines[idx]
-    if empty(line) && idx != 0
-      continue
+  let lines = getline(first_sep, last_sep)
+  for line_index in range(len(lines))
+    let line = lines[line_index]
+    let ins_byte = match(line, '|', 0, col_idx + 2)
+    if s:matches(line, s:table_sep_pattern)
+      let line = line[:ins_byte - 1] .. '|' .. repeat('-', a:column_width + 2) .. line[ins_byte:]
+    else
+      let line = line[:ins_byte - 1] .. '|' .. repeat(' ', a:column_width + 2) .. line[ins_byte:]
     endif
-
-    let trimmed_text = ' ' .. trim(line)
-    let last_linenr = start_linenr + idx
-    let cur_start_colnr = start_colnr + strcharlen(trimmed_text) - 1
-    call setcharpos('.', [0, last_linenr, cur_start_colnr, 0, cur_start_colnr])
-    startinsert
-    return
-  endfor
-endfunction
-
-" StartTableInsert()
-"   enter table insert mode
-function! StartTableInsert()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
-  " set table_edit_mode variable in buffer
-  let b:table_edit_mode = 1
-  let b:last_table_info = table_info
-
-  let row = s:get_cursor_table_pararow(table_info, linenr)
-  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
-  call s:start_insert_in_table_cell(table_info, row, col)
-endfunction
-
-" s:increment_table_row_column(table_info, row, column, row_off, col_off)
-"   return next row,column index pair in the table by row and col offsets
-"   return [-1,-1] if there is no next paragraph cell
-function! s:increment_table_row_column(table_info, row, column, row_off, col_off) "-> [row, col]
-  if assert_true(a:row >= 0, "row out-of-bounds")
-    return [-1, -1]
-  elseif assert_true(a:column >= 0, "col out-of-bounds")
-    return [-1, -1]
-  endif
-
-  let row_heights = s:get_table_pararow_heights(a:table_info)
-
-  let cell_areas = []
-  for height in row_heights
-    let areas = copy(a:table_info.cols)->map({_,width -> width * height})
-    call extend(cell_areas, areas)
+    let lines[line_index] = line
   endfor
 
-  let column_count = len(a:table_info.cols)
-  let next_cell_index = (a:row + a:row_off) * column_count + (a:column + a:col_off)
-  let max_cell_index = len(row_heights) * column_count
-  while next_cell_index < max_cell_index && next_cell_index >= 0
-    if cell_areas[next_cell_index] == 0
-      let next_cell_index = next_cell_index + 1
-      continue
-    endif
+  call deletebufline(bufnr(), first_sep, last_sep)
+  call append(first_sep - 1, lines)
+  call setcursorcharpos(linenr, colnr)
+endfunction
 
-    return [next_cell_index / column_count, next_cell_index % column_count]
+function! s:insert_row_at_cursor()
+  " insert a new row below the row containing the cursor
+  let linenr = line('.')
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let bot_sep = s:find_next_sep(linenr)
+  let bot_sep_line = getline(bot_sep)
+  call append(bot_sep, [substitute(bot_sep_line, '-', ' ', 'g'), bot_sep_line])
+endfunction
+
+function! s:cell_containing(linenr, colnr) "-> [Number, Number]
+  " return the row_idx and col_idx of the cell containing the given point
+  let col_idx = s:col_idx_from_line(getline(a:linenr), a:colnr)
+  let row_idx = 0
+  let this_sep = s:find_next_sep(s:find_first_sep(a:linenr))
+  let last_sep = s:find_last_sep(a:linenr)
+
+  while this_sep != last_sep
+    if this_sep > a:linenr
+      break
+    endif
+    let row_idx += 1
+    let this_sep = s:find_next_sep(this_sep)
+  endwhile
+  return [row_idx, col_idx]
+endfunction
+
+function! s:change_col_text(linenr, col_idx, text)
+  " change column text on given line
+  let split_line = split(getline(a:linenr), '|')
+  let split_line[a:col_idx] = a:text
+  call setline(a:linenr, '|' .. join(split_line, '|') .. '|')
+endfunction
+
+function! s:col_idx_from_line(line, colnr) "-> Number
+  " return the index of the table column containing colnr
+  let end_byte = byteidx(a:line, a:colnr - 1)
+  return count(a:line[:end_byte], '|') - 1
+endfunction
+
+function! s:col_text_on_line(linenr, col_idx) "-> String
+  " return the trimmed text in a table column
+  return split(getline(a:linenr), '|')[a:col_idx]
+endfunction
+
+function! s:cols_on_line(linenr) "->  List[Number]
+  " return column widths from table header
+  let header = getline(s:find_first_sep(a:linenr))
+  return map(split(header, '|'), "len(v:val) - 2")
+endfunction
+
+function! s:cursor_pos() "-> [Number, Number]
+  " return [linenr, colnr] of cursor
+  let [_, linenr, colnr, _, _] = getcursorcharpos()
+  return [linenr, colnr]
+endfunction
+
+function! s:align_columns(lines) "-> List[String]
+  " return lines with columns aligned to a consistent column width
+  if empty(a:lines)
+    return a:lines
+  endif
+
+  let cols = map(split(a:lines[0], '|'), "strcharlen(v:val)")
+  for line in a:lines
+    let split_line = split(line, '|')
+    for col_idx in range(len(cols))
+      let length = strcharlen(split_line[col_idx])
+      if length > cols[col_idx]
+        let cols[col_idx] = length
+      endif
+    endfor
+  endfor
+
+  let row_separator = '|'
+  let row_format_string = '|'
+  for column_width in cols
+    let row_separator ..= repeat('-', column_width) .. '|'
+    let row_format_string ..= '%-' .. column_width .. 'S|'
+  endfor
+
+  let PrintLine = function("printf", [row_format_string])
+
+  let new_lines = []
+  for line in a:lines
+    if s:matches(line, s:table_sep_pattern)
+      call add(new_lines, row_separator)
+    else
+      let split_line = split(line, '|')
+      call add(new_lines, call(PrintLine, split_line))
+    endif
+  endfor
+
+  return new_lines
+endfunction
+
+function! s:find_first_sep(linenr) "-> Number
+  " return linenr of first separator of the table
+  let old_linenr = a:linenr
+  let linenr = s:find_prev_sep(a:linenr)
+  while linenr != -1
+    let old_linenr = linenr
+    let linenr = s:find_prev_sep(linenr)
+  endwhile
+  return old_linenr
+endfunction
+
+function! s:find_last_sep(linenr) "-> Number
+  " return linenr of last separator of the table
+  let old_linenr = a:linenr
+  let linenr = s:find_next_sep(a:linenr)
+  while linenr != -1
+    let old_linenr = linenr
+    let linenr = s:find_next_sep(linenr)
+  endwhile
+  return old_linenr
+endfunction
+
+function! s:find_next_sep(linenr) "-> Number
+  " return linenr of next separator of the table
+  let linenr = a:linenr + 1
+  while s:matches(getline(linenr), s:table_pattern)
+    if s:matches(getline(linenr), s:table_sep_pattern)
+      return linenr
+    endif
+    let linenr += 1
+  endwhile
+  return -1
+endfunction
+
+function! s:find_prev_sep(linenr) "-> Number
+  " return linenr of previous separator of the table
+  let linenr = a:linenr - 1
+  while s:matches(getline(linenr), s:table_pattern)
+    if s:matches(getline(linenr), s:table_sep_pattern)
+      return linenr
+    endif
+    let linenr -= 1
+  endwhile
+  return -1
+endfunction
+
+function! s:find_prev_non_empty_by_col_idx(linenr, col_idx) "-> Number
+  " return linenr of previous non-empty line in a given col
+  let linenr = a:linenr - 1
+  while empty(trim(s:col_text_on_line(linenr, a:col_idx)))
+    let linenr -= 1
+  endwhile
+  return linenr
+endfunction
+
+function! s:format_table_at_cursor()
+  " format the table located at the cursor
+  let [cur_linenr, cur_colnr] = s:cursor_pos()
+  let formatter = s:create_table_formatter(cur_linenr, cur_colnr)
+  if empty(formatter)
+    return
+  endif
+
+  let [cur_row_idx, cur_col_idx] = s:cell_containing(cur_linenr, cur_colnr)
+  let max_col_idx = s:max_col_idx_from_line(getline(formatter.first_sep))
+  if cur_col_idx > max_col_idx
+    let cur_col_idx = max_col_idx
+  endif
+
+  let rows = []
+  let this_sep = formatter.first_sep
+  while this_sep != formatter.last_sep
+    let next_sep = s:find_next_sep(this_sep)
+
+    let row = formatter.collect_row(this_sep, next_sep)
+    call map(row, "formatter.remove_column_trailing_empty_lines(v:val)")
+    call map(row, {idx, col -> formatter.wrap_column(col, idx)})
+    call add(rows, row)
+
+    let this_sep = next_sep
   endwhile
 
-  return [-1, -1]
+  let lines = formatter.format_rows(rows)
+  let lines = s:align_columns(lines)
+
+  call deletebufline(bufnr(), formatter.first_sep, formatter.last_sep)
+  call append(formatter.first_sep - 1, lines)
+  call s:move_cursor_to_cell(formatter.first_sep, cur_row_idx, cur_col_idx)
 endfunction
 
-" GotoRelParaCell(row_off, col_off)
-"   move cursor to beginning of the paragraph cell by the row and column
-"   offsets, if one exists, otherwise do nothing
-function! GotoRelParaCell(row_off, col_off)
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
+function! s:resize_table_at_cursor(...)
+  " interactively prompt the user for the new column width of the column
+  " containing the cursor
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
     return
   endif
 
-  let row = s:get_cursor_table_pararow(table_info, linenr)
-  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
-  let [next_row, next_col] = s:increment_table_row_column(table_info, row, col, a:row_off, a:col_off)
-  if next_row == -1 || next_col == -1
-    return
-  endif
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let header = s:find_first_sep(linenr)
+  let cols = s:cols_on_line(header)
 
-  let selection = s:get_paracell_selection(table_info, next_row, next_col)
-  if empty(selection)
-    return
-  endif
-
-  let [linenr, colnr, _, _] = selection
-  call setcharpos('.', [0, linenr, colnr, 0, colnr])
-endfunction
-
-" InsertColumn(width)
-"   add a column of specified width at the end of the table
-"   use visual block mode to move this column to desired location
-function InsertColumn(width)
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    return
-  endif
-
-  call add(table_info.cols, max([a:width, s:min_column_width]))
-  call s:format_table(table_info)
-  call setcharpos('.', [0, linenr, columnnr, 0, columnnr])
-endfunction
-
-" s:insert_row(table_info)
-"   add a row at the end of the specified table
-function s:insert_row(table_info)
-  let l:table_info = a:table_info
-  let [row_separator, format_string] =
-        \ s:make_table_row_separators_and_format_string(table_info.cols)
-  call appendbufline(table_info.bufnr, table_info.last_linenr, [
-        \ substitute(row_separator, '-', ' ', 'g'), row_separator])
-endfunction
-
-" InsertRow()
-"   add a row at the end of the table
-function InsertRow()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if ! empty(table_info)
-    call s:insert_row(table_info)
-  endif
-endfunction
-
-" s:format_at_cursor()
-"   format the previously edited table in buffer
-"   g:table_auto_format disrupts this behaviour
-function! s:format_at_cursor()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let current_line = getbufoneline(bufnr(), linenr)
-  if match(current_line, s:table_make_pattern) == 0
-    call s:make_table()
-    return
-  endif
-
-  if get(b:, 'table_auto_hold', 0)
-    return
-  endif
-
-  if ! get(b:, 'table_edit_mode', 0)
-    return
-  endif
-
-  if get(g:, 'table_auto_format', 0)
-    return
-  endif
-
-  let b:table_edit_mode = 0
-  let table_info = get(b:, 'last_table_info')
-  if empty(table_info)
-    return
-  endif
-  let b:last_table_info = {}
-
-  call s:format_table(table_info)
-  call setcharpos('.', [0, linenr, columnnr, 0, columnnr])
-endfunction
-
-" s:table_enter_insert_mode()
-"   set table edit mode if cursor is in a table
-function! s:table_enter_insert_mode()
-  let current_line = getline('.')
-  if match(current_line, s:table_pattern)
-    let b:table_edit_mode = 0
-    let b:last_table_info = {}
+  if a:0 > 0
+    let usr_column_width = str2nr(a:1)
   else
-    let b:table_edit_mode = 1
-    let b:last_table_info = s:get_table_info(bufnr(), line('.'))
+    call inputsave()
+    let usr_column_width = str2nr(input("Column Width: ", cols[col_idx]))
+    call inputrestore()
   endif
+
+  if usr_column_width < s:min_column_width
+    redraw
+    echohl ErrorMsg
+    echomsg "Invalid column width"
+    echohl None
+    return
+  elseif usr_column_width == cols[col_idx]
+    return
+  endif
+
+  let cols[col_idx] = usr_column_width
+  let new_header_line = '|'
+  for column_width in cols
+    let new_header_line ..= repeat('-', column_width + 2) .. '|'
+  endfor
+
+  call setline(header, new_header_line)
+  call s:format_table_at_cursor()
 endfunction
 
-" s:table_insert_mode_return()
-"   return mapping for current return context
-function! s:table_insert_mode_return() "-> mapping
-  let current_line = getbufoneline(bufnr(), line('.'))
-
-  if match(current_line, s:table_make_pattern) == 0
-    return "\<Esc>i"   " let InsertLeave autocmd handle making table
-  endif
-
-  if match(current_line, s:table_pattern) == 0
-    let b:table_auto_hold = 1
-    return "\<Esc>\<Plug>(TableNextLine)"
-  endif
-
-  return "\<CR>"
+function! s:is_cursor_at_col_start() "-> bool
+  " return true if cursor is at the start of a table column
+  return search('| \%#', 'bn') != 0
 endfunction
 
-" s:table_insert_mode_backspace()
-"   return mapping for current backspace context
-function! s:table_insert_mode_backspace() "-> mapping
-  let current_line = getbufoneline(bufnr(), line('.'))
+function! s:line_from_cols(cols) "-> String
+  " create a blank table lines with specified column widths
+  let line = "|"
+  for column_width in a:cols
+    let column_width = max([column_width, s:min_column_width])
+    let line ..= repeat(' ', column_width + 2) .. "|"
+  endfor
+  return line
+endfunction
 
-  if match(current_line, s:table_pattern) == 0
-    if search('| \%#', 'bn', line('.')) != 0
-      let b:table_auto_hold = 1
-      return "\<Esc>\<Plug>(TablePrevLine)"
+function! s:matches(expr, pattern) "-> bool
+  " return if expr matches pattern
+  return match(a:expr, a:pattern) != -1
+endfunction
+
+function! s:max_col_idx_from_line(line) "-> Number
+  " return maxiumum column index for a given line
+  return count(a:line, '|') - 2
+endfunction
+
+function! s:move_cursor_to_cell(linenr, row_idx, col_idx)
+  " move cursor to the end of text of the give cell
+  let first_sep = s:find_first_sep(a:linenr)
+  let last_sep = s:find_last_sep(a:linenr)
+
+  let row_idx = a:row_idx
+  let this_bot_sep = first_sep
+  while row_idx >= 0
+    let this_bot_sep = s:find_next_sep(this_bot_sep)
+    let row_idx -= 1
+  endwhile
+
+  let new_linenr = s:find_prev_non_empty_by_col_idx(this_bot_sep, a:col_idx)
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(a:col_idx)
+endfunction
+
+function! s:move_cursor_to_col_text_end(col_idx)
+  " move cursor to the end of text in a given table column
+  call search(printf('^|\(.\{-}|\)\{%d} .\{-}\zs\s*|',  a:col_idx))
+endfunction
+
+function! s:move_cursor_to_col_text_start(col_idx)
+  " move cursor to the start of text in a given table column
+  call search(printf('^|\(.\{-}|\)\{%d} \zs', a:col_idx))
+endfunction
+
+function! s:split_col_text(line, byte) "-> [String, String]
+  " return the column text containing the byte index, split at that index
+  let before = split(a:line[:a:byte], '|')[-1]
+  let after = split(a:line[a:byte + 1:], '|')[0]
+  return [before, after]
+endfunction
+
+" ====================
+" Formatting Functions
+" ====================
+
+function! s:create_table_formatter(cur_linenr, cur_colnr) "-> Dictionary
+  " return dictionary representing a formatter object
+  " return empty dictionary if cur_linenr is not in the table
+  let line = getline(a:cur_linenr)
+  if ! s:matches(line, s:table_pattern)
+    return {}
+  elseif s:matches(line, s:table_make_pattern)
+    return {}
+  endif
+
+  let first_sep = s:find_first_sep(a:cur_linenr)
+  let last_sep = s:find_last_sep(a:cur_linenr)
+  if first_sep == last_sep
+    return {}
+  endif
+
+  let cols = s:cols_on_line(first_sep)
+  call map(cols, "max([v:val, s:min_column_width])")
+
+  let formatter = {
+        \ 'cur_linenr': a:cur_linenr,
+        \ 'cur_colnr': a:cur_colnr,
+        \ 'first_sep': first_sep,
+        \ 'last_sep': last_sep,
+        \ 'cols': cols,
+        \ 'collect_row': function("<SID>formatter_collect_row"),
+        \ 'wrap_column': function("<SID>formatter_wrap_column"),
+        \ 'remove_column_trailing_empty_lines': function("<SID>remove_column_trailing_empty_lines"),
+        \ 'format_rows': function("<SID>formatter_format_rows")
+        \}
+
+  return formatter
+endfunction
+
+function s:formatter_collect_row(this_sep, next_sep) dict "-> List[List[String]]
+  let max_col_idx = s:max_col_idx_from_line(getline(self.first_sep))
+
+  let row = []
+  let buffers = []
+  for i in range(0, max_col_idx)
+    call add(row, [])
+    call add(buffers, '')
+  endfor
+
+  for linenr in range(a:this_sep + 1, a:next_sep - 1)
+    let split_line = split(getline(linenr), '|')
+    for col_idx in range(0, max_col_idx)
+      let column = row[col_idx]
+
+      if col_idx >= len(split_line)
+        call add(column, buffers[col_idx])
+        let buffers[col_idx] = ''
+        continue
+      endif
+
+      let text = trim(split_line[col_idx])
+      if empty(text)
+        call add(column, buffers[col_idx])
+        let buffers[col_idx] = ''
+      elseif empty(buffers[col_idx]) && linenr > a:this_sep + 1
+        call add(column, '')
+        let buffers[col_idx] = text
+      elseif empty(buffers[col_idx])
+        let buffers[col_idx] = text
+      else
+        let buffers[col_idx] ..= ' ' .. text
+      endif
+    endfor
+  endfor
+
+  for col_idx in range(0, max_col_idx)
+    call add(row[col_idx], buffers[col_idx])
+  endfor
+
+  return row
+endfunction
+
+function! s:formatter_wrap_column(column, col_idx) dict "-> List[String]
+  let column_width = self.cols[a:col_idx]
+  let lines = []
+
+  for paragraph in a:column
+    let line_buffer = ''
+    for word in split(paragraph, ' ')
+      if empty(line_buffer)
+        let line_buffer = word
+      elseif strcharlen(line_buffer) + strcharlen(word) + 1 <= column_width
+        let line_buffer ..= ' ' .. word
+      else
+        call add(lines, line_buffer)
+        let line_buffer = word
+      endif
+    endfor
+    call add(lines, line_buffer)
+  endfor
+
+  return lines
+endfunction
+
+function! s:remove_column_trailing_empty_lines(column) "-> List[String]
+  let result = []
+  let empty_count = 0
+  for paragraph in a:column
+    if empty(paragraph)
+      let empty_count += 1
+    elseif empty_count > 0
+      call extend(result, repeat([''], empty_count))
+      let empty_count = 0
+      call add(result, paragraph)
+    else
+      call add(result, paragraph)
     endif
-  endif
-
-  return "\<BS>"
+  endfor
+  return result
 endfunction
 
-" s:table_insert_mode_tab()
-"   return mapping for current tab context
-function! s:table_insert_mode_tab() "-> mapping
-  let current_line = getbufoneline(bufnr(), line('.'))
+function! s:formatter_format_rows(rows) dict "-> List[String]
+  " return formatted rows as lines to be inserted into the buffer
+  let lines = []
 
-  if match(current_line, s:table_pattern) == 0
-    return "\<Esc>\<Plug>(TableNextCell)"
-  endif
+  let row_separator = '|'
+  let row_format_string = '|'
+  for column_width in self.cols
+    let row_separator ..= repeat('-', column_width + 2) .. '|'
+    let row_format_string ..= ' %-' .. column_width .. 'S |'
+  endfor
 
-  return "\<Tab>"
+  let PrintLine = function("printf", [row_format_string])
+
+  call add(lines, row_separator)
+  for row in a:rows
+    let max_lines = 0
+    for column in row
+      let max_index = len(column) - 1
+      if max_index > max_lines
+        let max_lines = max_index
+      endif
+    endfor
+
+    for line_index in range(0, max_lines)
+      let line = []
+      for col_idx in range(len(self.cols))
+        call add(line, get(row[col_idx], line_index, ''))
+      endfor
+      call add(lines, call(PrintLine, line))
+    endfor
+    call add(lines, row_separator)
+  endfor
+
+  return lines
 endfunction
 
-" s:table_insert_mode_stab()
-"   return mapping for current shift-tab context
-function! s:table_insert_mode_stab() "-> mapping
-  let current_line = getbufoneline(bufnr(), line('.'))
+" ============
+" Autocommands
+" ============
 
-  if match(current_line, s:table_pattern) == 0
-    return "\<Esc>\<Plug>(TablePrevCell)"
-  endif
+augroup table_edit
+  autocmd!
+  autocmd InsertLeave * call <SID>au_insert_leave()
+augroup END
 
-  return "\<S-Tab>"
-endfunction
+" ========
+" Mappings
+" ========
 
-" s:table_next_line()
-"   go down to the beginning of the next line in a paragraph-cell
-function! s:table_next_line()
-  let bufnr = bufnr()
-  let linenr = line('.')
+nnoremap <silent> <Plug>(TableMake) <CMD>call <SID>plug_make()<CR>
+nnoremap <silent> <Plug>(TableNextCell) <CMD>call <SID>plug_next_cell()<CR>
+nnoremap <silent> <Plug>(TablePrevCell) <CMD>call <SID>plug_prev_cell()<CR>
+nnoremap <silent> <Plug>(TableThisCell) <CMD>call <SID>plug_this_cell()<CR>
+nnoremap <silent> <Plug>(TableSplitLine) <CMD>call <SID>plug_split_line()<CR>
+nnoremap <silent> <Plug>(TableJoinLine) <CMD>call <SID>plug_join_line()<CR>
+nnoremap <silent> <Plug>(TableCellInsert) <CMD>call <SID>plug_cell_insert()<CR>
+nnoremap <silent> <Plug>(TableSelectCell) <CMD>call <SID>plug_select_cell()<CR>
+vnoremap <silent> <Plug>(VTableSelectCell) :<C-U>call <SID>plug_select_cell()<CR>
+onoremap <silent> <Plug>(OTableSelectCell) :<C-U>call <SID>plug_select_cell()<CR>
+nnoremap <silent> <Plug>(TableSelectCol) <CMD>call <SID>plug_select_col()<CR>
+vnoremap <silent> <Plug>(VTableSelectCol) :<C-U>call <SID>plug_select_col()<CR>
+onoremap <silent> <Plug>(OTableSelectCol) :<C-U>call <SID>plug_select_col()<CR>
+nnoremap <silent> <Plug>(TableSelectRow) <CMD>call <SID>plug_select_row()<CR>
+vnoremap <silent> <Plug>(VTableSelectRow) :<C-U>call <SID>plug_select_row()<CR>
+onoremap <silent> <Plug>(OTableSelectRow) :<C-U>call <SID>plug_select_row()<CR>
+nnoremap <silent> <Plug>(TableLeftCell) <CMD>call <SID>plug_left_cell()<CR>
+nnoremap <silent> <Plug>(TableRightCell) <CMD>call <SID>plug_right_cell()<CR>
+nnoremap <silent> <Plug>(TableDownCell) <CMD>call <SID>plug_down_cell()<CR>
+nnoremap <silent> <Plug>(TableUpCell) <CMD>call <SID>plug_up_cell()<CR>
+nnoremap <silent> <Plug>(TableNextParagraph) <CMD>call <SID>plug_next_paragraph()<CR>
+nnoremap <silent> <Plug>(TablePrevParagraph) <CMD>call <SID>plug_prev_paragraph()<CR>
 
-  if match(getbufoneline(bufnr, linenr + 1), s:table_sep_pattern) == 0
-    let next_line = getbufoneline(bufnr, linenr + 1)
-    call appendbufline(bufnr, linenr, substitute(next_line, '-', ' ', 'g'))
-  endif
+inoremap <silent> <expr> <CR> <SID>imap_return()
+inoremap <silent> <expr> <Tab> <SID>imap_tab()
+inoremap <silent> <expr> <S-Tab> <SID>imap_stab()
+inoremap <silent> <expr> <BS> <SID>imap_backspace()
+nnoremap <silent> <expr> { <SID>nmap_left_curly()
+nnoremap <silent> <expr> } <SID>nmap_right_curly()
 
-  unlet b:table_auto_hold
-  execute "normal" "F|j"
-  call search(s:table_line_end_pattern)
-  startinsert
-endfunction
+if ! get(g:, "table_inhibit_leader_keys", 0)
+  nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
+  nnoremap <silent> <Leader>ti <Plug>(TableCellInsert)
+  nnoremap <silent> <Leader>tr <CMD>ResizeTableColumn<CR>
+  nnoremap <silent> <Leader>th <Plug>(TableLeftCell)
+  nnoremap <silent> <Leader>tl <Plug>(TableRightCell)
+  nnoremap <silent> <Leader>tj <Plug>(TableDownCell)
+  nnoremap <silent> <Leader>tk <Plug>(TableUpCell)
+endif
 
-" s:table_prev_line()
-"   move cursor to end of previous line in cell
-function! s:table_prev_line()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    startinsert
-    return
-  endif
+if ! get(g:, "table_inhibit_text_objects", 0)
+  nnoremap <silent> <Leader>tc <Plug>(TableSelectCell)
+  vnoremap <silent> <Leader>tc <Plug>(VTableSelectCell)
+  onoremap <silent> <Leader>tc <Plug>(OTableSelectCell)
+  nnoremap <silent> <Leader>tC <Plug>(TableSelectCol)
+  vnoremap <silent> <Leader>tC <Plug>(VTableSelectCol)
+  onoremap <silent> <Leader>tC <Plug>(OTableSelectCol)
+  nnoremap <silent> <Leader>tR <Plug>(TableSelectRow)
+  vnoremap <silent> <Leader>tR <Plug>(VTableSelectRow)
+  onoremap <silent> <Leader>tR <Plug>(OTableSelectRow)
+endif
 
-  unlet b:table_auto_hold
-  let row = s:get_cursor_table_pararow(table_info, linenr)
-  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
-  let selection = s:get_paracell_selection(table_info, row, col)
-  if empty(selection)
-    startinsert
-    return
-  endif
+" ========
+" Commands
+" ========
 
-  let [start_linenr, _, _, _] = selection
-  if linenr != start_linenr
-    execute "normal" "F|k"
-    call search(s:table_line_end_pattern)
-  endif
-  startinsert
-endfunction
+command! FormatTable call <SID>format_table_at_cursor()
+command! -nargs=? ResizeTableColumn call <SID>resize_table_at_cursor(<args>)
+command! InsertRow call <SID>insert_row_at_cursor()
+command! -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
 
-" s:table_next_cell()
-"   move cursor to the next cell
-function! s:table_next_cell()
-  let [_, linenr, columnnr, _] = getcharpos('.')
-  let table_info = s:get_table_info(bufnr(), linenr)
-  if empty(table_info)
-    startinsert
-    return
-  endif
-
-  let row = s:get_cursor_table_pararow(table_info, linenr)
-  let col = s:get_cursor_table_column(table_info, linenr, columnnr)
-  let [next_row, next_col] = s:increment_table_row_column(table_info, row, col, 0, 1)
-  if next_row == -1 || next_col == -1
-    call s:insert_row(table_info)
-    let table_info = s:get_table_info(bufnr(), linenr)
-    let next_row = row + 1
-    let next_col = 0
-  endif
-
-  " set table_edit_mode variable in buffer
-  let b:table_edit_mode = 1
-  let b:last_table_info = table_info
-  call s:start_insert_in_table_cell(table_info, next_row, next_col)
-endfunction
-
-" s:table_prev_cell()
-"   move cursor to the previous cell
-function! s:table_prev_cell()
-  call GotoRelParaCell(0, -1)
-  call StartTableInsert()
-endfunction
+" ==========
+" Extensions
+" ==========
 
 " TableExposeVariable(variable_name)
 "   use for extending this script
@@ -955,29 +1260,4 @@ function! TableExposeFunction(function_name) "-> funcref
   endif
   return Funcref
 endfunction
-
-" ============
-" Autocommands
-" ============
-
-augroup table_edit
-  autocmd!
-  autocmd InsertEnter * call <SID>table_enter_insert_mode()
-  autocmd InsertLeave * call <SID>format_at_cursor()
-augroup END
-
-" ========
-" Mappings
-" ========
-
-nnoremap <silent> <Plug>(MakeTable) <CMD>call <SID>make_table()<CR>
-nnoremap <silent> <Plug>(TableNextLine) <CMD>call <SID>table_next_line()<CR>
-nnoremap <silent> <Plug>(TablePrevLine) <CMD>call <SID>table_prev_line()<CR>
-nnoremap <silent> <Plug>(TableNextCell) <CMD>call <SID>table_next_cell()<CR>
-nnoremap <silent> <Plug>(TablePrevCell) <CMD>call <SID>table_prev_cell()<CR>
-
-inoremap <silent> <expr> <CR> <SID>table_insert_mode_return()
-inoremap <silent> <expr> <Tab> <SID>table_insert_mode_tab()
-inoremap <silent> <expr> <S-Tab> <SID>table_insert_mode_stab()
-inoremap <silent> <expr> <BS> <SID>table_insert_mode_backspace()
 

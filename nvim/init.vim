@@ -1,7 +1,7 @@
 " =======
 " Sources
 " =======
-source ~/.config/nvim/table2.vim
+source ~/.config/nvim/table.vim
 
 " ====================
 " table.vim Extensions

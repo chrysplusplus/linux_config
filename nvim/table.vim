@@ -260,6 +260,30 @@ function! s:nmap_right_curly() "-> mapping
   endif
 endfunction
 
+function! s:nmap_o() "-> mapping
+  " key mapping for o
+  let line = getline('.')
+  if s:matches(line, s:table_sep_pattern)
+    return "\<Plug>(TableInsertRowBelow)"
+  elseif s:matches(line, s:table_pattern)
+    return "\<Plug>(TableOpenBelow)"
+  else
+    return "o"
+  endif
+endfunction
+
+function! s:nmap_O() "-> mapping
+  " key mapping for O
+  let line = getline('.')
+  if s:matches(line, s:table_sep_pattern)
+    return "\<Plug>(TableInsertRowAbove)"
+  elseif s:matches(line, s:table_pattern)
+    return "\<Plug>(TableOpenAbove)"
+  else
+    return "O"
+  endif
+endfunction
+
 function! s:plug_make()
   " handler for make operation
   let linenr = line('.')
@@ -653,9 +677,116 @@ function s:plug_prev_paragraph()
   call s:move_cursor_to_col_text_start(col_idx)
 endfunction
 
+function! s:plug_open_above()
+  " handler for open_above operation
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  if s:cursor_is_out_of_bounds(linenr, colnr)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(current_line, colnr)
+
+  let column_width = s:cols_on_line(s:find_prev_sep(linenr))[col_idx]
+  let next_text = s:col_text_on_line(linenr, col_idx)
+  let next_linenr = linenr + 1
+  call s:change_col_text(linenr, col_idx, repeat(' ', column_width + 2))
+  while ! s:matches(getline(next_linenr), s:table_sep_pattern)
+    let old_text = s:col_text_on_line(next_linenr, col_idx)
+    call s:change_col_text(next_linenr, col_idx, next_text)
+    let next_text = old_text
+    let next_linenr += 1
+  endwhile
+
+  if ! empty(trim(next_text)) || linenr + 1 == next_linenr
+    let split_line = split(substitute(getline(next_linenr), '-', ' ', 'g'), '|')
+    let split_line[col_idx] = next_text
+    call append(next_linenr - 1, '|' .. join(split_line, '|') .. '|')
+  endif
+
+  call setcursorcharpos(linenr, 0)
+  call s:move_cursor_to_col_text_start(col_idx)
+  startinsert
+endfunction
+
+function! s:plug_open_below()
+  " handler for open_below operation
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  if s:cursor_is_out_of_bounds(linenr, colnr)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(current_line, colnr)
+
+  let column_width = s:cols_on_line(s:find_prev_sep(linenr))[col_idx]
+  let next_text = repeat(' ', column_width + 2)
+  let next_linenr = linenr + 1
+  while ! s:matches(getline(next_linenr), s:table_sep_pattern)
+    let old_text = s:col_text_on_line(next_linenr, col_idx)
+    call s:change_col_text(next_linenr, col_idx, next_text)
+    let next_text = old_text
+    let next_linenr += 1
+  endwhile
+
+  if ! empty(trim(next_text)) || linenr + 1 == next_linenr
+    let split_line = split(substitute(getline(next_linenr), '-', ' ', 'g'), '|')
+    let split_line[col_idx] = next_text
+    call append(next_linenr - 1, '|' .. join(split_line, '|') .. '|')
+  endif
+
+  call setcursorcharpos(linenr + 1, 0)
+  call s:move_cursor_to_col_text_start(col_idx)
+  startinsert
+endfunction
+
+function! s:plug_insert_row_above()
+  " handler for insert_row_above operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  let col_idx = s:col_idx_from_line(line, colnr)
+  let prev_sep = s:find_prev_sep(linenr)
+  if prev_sep == -1
+    call append(linenr - 1, [line, substitute(line, '-', ' ', 'g')])
+    call setcursorcharpos(linenr - 1, 0)
+    call s:move_cursor_to_col_text_start(col_idx)
+    startinsert
+  else
+    call append(prev_sep, [substitute(line, '-', ' ', 'g'), line])
+    call setcursorcharpos(prev_sep + 1, 0)
+    call s:move_cursor_to_col_text_start(col_idx)
+    startinsert
+  endif
+endfunction
+
+function! s:plug_insert_row_below()
+  " handler for insert_row_below operation
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  let col_idx = s:col_idx_from_line(line, colnr)
+  call append(linenr, [substitute(line, '-', ' ', 'g'), line])
+  call setcursorcharpos(linenr + 1, 0)
+  call s:move_cursor_to_col_text_start(col_idx)
+  startinsert
+endfunction
+
 " =========
 " Functions
 " =========
+
+function! s:cursor_is_out_of_bounds(linenr, colnr)
+  " return non-zero value if given cursor is not within bounds of a table
+  let current_line = getline(a:linenr)
+  let col_idx = s:col_idx_from_line(current_line, a:colnr)
+  let header = s:find_first_sep(a:linenr)
+  if header == a:linenr
+    return 1
+  elseif col_idx > s:max_col_idx_from_line(getline(header))
+    return 1
+  else
+    return 0
+  endif
+endfunction
 
 function! s:maybe_unlet_b_table_working()
   " unset b:table_working if it was set
@@ -1181,6 +1312,10 @@ nnoremap <silent> <Plug>(TableDownCell) <CMD>call <SID>plug_down_cell()<CR>
 nnoremap <silent> <Plug>(TableUpCell) <CMD>call <SID>plug_up_cell()<CR>
 nnoremap <silent> <Plug>(TableNextParagraph) <CMD>call <SID>plug_next_paragraph()<CR>
 nnoremap <silent> <Plug>(TablePrevParagraph) <CMD>call <SID>plug_prev_paragraph()<CR>
+nnoremap <silent> <Plug>(TableOpenAbove) <CMD>call <SID>plug_open_above()<CR>
+nnoremap <silent> <Plug>(TableOpenBelow) <CMD>call <SID>plug_open_below()<CR>
+nnoremap <silent> <Plug>(TableInsertRowAbove) <CMD>call <SID>plug_insert_row_above()<CR>
+nnoremap <silent> <Plug>(TableInsertRowBelow) <CMD>call <SID>plug_insert_row_below()<CR>
 
 inoremap <silent> <expr> <CR> <SID>imap_return()
 inoremap <silent> <expr> <Tab> <SID>imap_tab()
@@ -1188,6 +1323,8 @@ inoremap <silent> <expr> <S-Tab> <SID>imap_stab()
 inoremap <silent> <expr> <BS> <SID>imap_backspace()
 nnoremap <silent> <expr> { <SID>nmap_left_curly()
 nnoremap <silent> <expr> } <SID>nmap_right_curly()
+nnoremap <silent> <expr> o <SID>nmap_o()
+nnoremap <silent> <expr> O <SID>nmap_O()
 
 if ! get(g:, "table_inhibit_leader_keys", 0)
   nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>

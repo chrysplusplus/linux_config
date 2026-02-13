@@ -146,7 +146,10 @@
 "
 " Defaults to 0
 
-" regex patterns used for tables
+" ================
+" Script Constants
+" ================
+
 let s:table_pattern = '^|.*|$'
 let s:table_sep_pattern = '^|\(-*|\)\+$'
 let s:table_make_pattern = '^|\(\d\+|\)\+$'
@@ -858,75 +861,43 @@ endfunction
 " Functions
 " =========
 
-function! s:cursor_is_out_of_bounds(linenr, colnr)
-  " return non-zero value if given cursor is not within bounds of a table
-  let current_line = getline(a:linenr)
-  let col_idx = s:col_idx_from_line(current_line, a:colnr)
-  let header = s:find_first_sep(a:linenr)
-  if header == a:linenr
-    return 1
-  elseif col_idx > s:max_col_idx_from_line(getline(header))
-    return 1
-  else
-    return 0
-  endif
-endfunction
-
-function! s:maybe_unlet_b_table_working()
-  " unset b:table_working if it was set
-  if exists("b:table_working")
-    unlet b:table_working
-  endif
-endfunction
-
-function! s:insert_col_at_cursor(column_width)
-  " insert a new column after the column containing the cursor
-  if a:column_width < s:min_column_width
-    redraw
-    echohl ErrorMsg
-    echomsg "Invalid column width"
-    echohl None
-    return
+function! s:align_columns(lines) "-> List[String]
+  " return lines with columns aligned to a consistent column width
+  if empty(a:lines)
+    return a:lines
   endif
 
-  let [linenr, colnr] = s:cursor_pos()
-  let current_line = getline(linenr)
-  if ! s:matches(current_line, s:table_pattern)
-    return
-  endif
-
-  let col_idx = s:col_idx_from_line(current_line, colnr)
-  let first_sep = s:find_first_sep(linenr)
-  let last_sep = s:find_last_sep(linenr)
-
-  let lines = getline(first_sep, last_sep)
-  for line_index in range(len(lines))
-    let line = lines[line_index]
-    let ins_byte = match(line, '|', 0, col_idx + 2)
-    if s:matches(line, s:table_sep_pattern)
-      let line = line[:ins_byte - 1] .. '|' .. repeat('-', a:column_width + 2) .. line[ins_byte:]
-    else
-      let line = line[:ins_byte - 1] .. '|' .. repeat(' ', a:column_width + 2) .. line[ins_byte:]
-    endif
-    let lines[line_index] = line
+  let cols = map(split(a:lines[0], '|'), "strcharlen(v:val)")
+  for line in a:lines
+    let split_line = split(line, '|')
+    for col_idx in range(len(cols))
+      let length = strcharlen(split_line[col_idx])
+      if length > cols[col_idx]
+        let cols[col_idx] = length
+      endif
+    endfor
   endfor
 
-  call deletebufline(bufnr(), first_sep, last_sep)
-  call append(first_sep - 1, lines)
-  call setcursorcharpos(linenr, colnr)
-endfunction
+  let row_separator = '|'
+  let row_format_string = '|'
+  for column_width in cols
+    let row_separator ..= repeat('-', column_width) .. '|'
+    let row_format_string ..= '%-' .. column_width .. 'S|'
+  endfor
 
-function! s:insert_row_at_cursor()
-  " insert a new row below the row containing the cursor
-  let linenr = line('.')
-  let line = getline(linenr)
-  if ! s:matches(line, s:table_pattern)
-    return
-  endif
+  let PrintLine = function("printf", [row_format_string])
 
-  let bot_sep = s:find_next_sep(linenr)
-  let bot_sep_line = getline(bot_sep)
-  call append(bot_sep, [substitute(bot_sep_line, '-', ' ', 'g'), bot_sep_line])
+  let new_lines = []
+  for line in a:lines
+    if s:matches(line, s:table_sep_pattern)
+      call add(new_lines, row_separator)
+    else
+      let split_line = split(line, '|')
+      call add(new_lines, call(PrintLine, split_line))
+    endif
+  endfor
+
+  return new_lines
 endfunction
 
 function! s:cell_containing(linenr, colnr) "-> [Number, Number]
@@ -970,49 +941,24 @@ function! s:cols_on_line(linenr) "->  List[Number]
   return map(split(header, '|'), "len(v:val) - 2")
 endfunction
 
+function! s:cursor_is_out_of_bounds(linenr, colnr)
+  " return non-zero value if given cursor is not within bounds of a table
+  let current_line = getline(a:linenr)
+  let col_idx = s:col_idx_from_line(current_line, a:colnr)
+  let header = s:find_first_sep(a:linenr)
+  if header == a:linenr
+    return 1
+  elseif col_idx > s:max_col_idx_from_line(getline(header))
+    return 1
+  else
+    return 0
+  endif
+endfunction
+
 function! s:cursor_pos() "-> [Number, Number]
   " return [linenr, colnr] of cursor
   let [_, linenr, colnr, _, _] = getcursorcharpos()
   return [linenr, colnr]
-endfunction
-
-function! s:align_columns(lines) "-> List[String]
-  " return lines with columns aligned to a consistent column width
-  if empty(a:lines)
-    return a:lines
-  endif
-
-  let cols = map(split(a:lines[0], '|'), "strcharlen(v:val)")
-  for line in a:lines
-    let split_line = split(line, '|')
-    for col_idx in range(len(cols))
-      let length = strcharlen(split_line[col_idx])
-      if length > cols[col_idx]
-        let cols[col_idx] = length
-      endif
-    endfor
-  endfor
-
-  let row_separator = '|'
-  let row_format_string = '|'
-  for column_width in cols
-    let row_separator ..= repeat('-', column_width) .. '|'
-    let row_format_string ..= '%-' .. column_width .. 'S|'
-  endfor
-
-  let PrintLine = function("printf", [row_format_string])
-
-  let new_lines = []
-  for line in a:lines
-    if s:matches(line, s:table_sep_pattern)
-      call add(new_lines, row_separator)
-    else
-      let split_line = split(line, '|')
-      call add(new_lines, call(PrintLine, split_line))
-    endif
-  endfor
-
-  return new_lines
 endfunction
 
 function! s:find_first_sep(linenr) "-> Number
@@ -1105,6 +1051,132 @@ function! s:format_table_at_cursor()
   call s:move_cursor_to_cell(formatter.first_sep, cur_row_idx, cur_col_idx)
 endfunction
 
+function! s:insert_col_at_cursor(column_width)
+  " insert a new column after the column containing the cursor
+  if a:column_width < s:min_column_width
+    redraw
+    echohl ErrorMsg
+    echomsg "Invalid column width"
+    echohl None
+    return
+  endif
+
+  let [linenr, colnr] = s:cursor_pos()
+  let current_line = getline(linenr)
+  if ! s:matches(current_line, s:table_pattern)
+    return
+  endif
+
+  let col_idx = s:col_idx_from_line(current_line, colnr)
+  let first_sep = s:find_first_sep(linenr)
+  let last_sep = s:find_last_sep(linenr)
+
+  let lines = getline(first_sep, last_sep)
+  for line_index in range(len(lines))
+    let line = lines[line_index]
+    let ins_byte = match(line, '|', 0, col_idx + 2)
+    if s:matches(line, s:table_sep_pattern)
+      let line = line[:ins_byte - 1] .. '|' .. repeat('-', a:column_width + 2) .. line[ins_byte:]
+    else
+      let line = line[:ins_byte - 1] .. '|' .. repeat(' ', a:column_width + 2) .. line[ins_byte:]
+    endif
+    let lines[line_index] = line
+  endfor
+
+  call deletebufline(bufnr(), first_sep, last_sep)
+  call append(first_sep - 1, lines)
+  call setcursorcharpos(linenr, colnr)
+endfunction
+
+function! s:insert_row_at_cursor()
+  " insert a new row below the row containing the cursor
+  let linenr = line('.')
+  let line = getline(linenr)
+  if ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let bot_sep = s:find_next_sep(linenr)
+  let bot_sep_line = getline(bot_sep)
+  call append(bot_sep, [substitute(bot_sep_line, '-', ' ', 'g'), bot_sep_line])
+endfunction
+
+function! s:is_cursor_at_col_start() "-> bool
+  " return true if cursor is at the start of a table column
+  return search('| \%#', 'bn') != 0
+endfunction
+
+function! s:line_from_cols(cols) "-> String
+  " create a blank table lines with specified column widths
+  let line = "|"
+  for column_width in a:cols
+    let column_width = max([column_width, s:min_column_width])
+    let line ..= repeat(' ', column_width + 2) .. "|"
+  endfor
+  return line
+endfunction
+
+function! s:matches(expr, pattern) "-> bool
+  " return if expr matches pattern
+  return match(a:expr, a:pattern) != -1
+endfunction
+
+function! s:max_col_idx_from_line(line) "-> Number
+  " return maxiumum column index for a given line
+  return count(a:line, '|') - 2
+endfunction
+
+function! s:maybe_unlet_b_table_working()
+  " unset b:table_working if it was set
+  if exists("b:table_working")
+    unlet b:table_working
+  endif
+endfunction
+
+function! s:move_cursor_to_cell(linenr, row_idx, col_idx)
+  " move cursor to the end of text of the give cell
+  let first_sep = s:find_first_sep(a:linenr)
+  let last_sep = s:find_last_sep(a:linenr)
+
+  let row_idx = a:row_idx
+  let this_bot_sep = first_sep
+  while row_idx >= 0
+    let this_bot_sep = s:find_next_sep(this_bot_sep)
+    let row_idx -= 1
+  endwhile
+
+  let new_linenr = s:find_prev_non_empty_by_col_idx(this_bot_sep, a:col_idx)
+  call setcursorcharpos(new_linenr, 0)
+  call s:move_cursor_to_col_text_end(a:col_idx)
+endfunction
+
+function! s:move_cursor_to_col_text_end(col_idx)
+  " move cursor to the end of text in a given table column
+  call search(printf('^|\(.\{-}|\)\{%d} .\{-}\zs\s*|',  a:col_idx))
+endfunction
+
+function! s:move_cursor_to_col_text_start(col_idx)
+  " move cursor to the start of text in a given table column
+  call search(printf('^|\(.\{-}|\)\{%d} \zs', a:col_idx))
+endfunction
+
+function! s:remove_column_trailing_empty_lines(column) "-> List[String]
+  let result = []
+  let empty_count = 0
+  for paragraph in a:column
+    if empty(paragraph)
+      let empty_count += 1
+    elseif empty_count > 0
+      call extend(result, repeat([''], empty_count))
+      let empty_count = 0
+      call add(result, paragraph)
+    else
+      call add(result, paragraph)
+    endif
+  endfor
+  return result
+endfunction
+
 function! s:resize_table_at_cursor(...)
   " interactively prompt the user for the new column width of the column
   " containing the cursor
@@ -1144,58 +1216,6 @@ function! s:resize_table_at_cursor(...)
 
   call setline(header, new_header_line)
   call s:format_table_at_cursor()
-endfunction
-
-function! s:is_cursor_at_col_start() "-> bool
-  " return true if cursor is at the start of a table column
-  return search('| \%#', 'bn') != 0
-endfunction
-
-function! s:line_from_cols(cols) "-> String
-  " create a blank table lines with specified column widths
-  let line = "|"
-  for column_width in a:cols
-    let column_width = max([column_width, s:min_column_width])
-    let line ..= repeat(' ', column_width + 2) .. "|"
-  endfor
-  return line
-endfunction
-
-function! s:matches(expr, pattern) "-> bool
-  " return if expr matches pattern
-  return match(a:expr, a:pattern) != -1
-endfunction
-
-function! s:max_col_idx_from_line(line) "-> Number
-  " return maxiumum column index for a given line
-  return count(a:line, '|') - 2
-endfunction
-
-function! s:move_cursor_to_cell(linenr, row_idx, col_idx)
-  " move cursor to the end of text of the give cell
-  let first_sep = s:find_first_sep(a:linenr)
-  let last_sep = s:find_last_sep(a:linenr)
-
-  let row_idx = a:row_idx
-  let this_bot_sep = first_sep
-  while row_idx >= 0
-    let this_bot_sep = s:find_next_sep(this_bot_sep)
-    let row_idx -= 1
-  endwhile
-
-  let new_linenr = s:find_prev_non_empty_by_col_idx(this_bot_sep, a:col_idx)
-  call setcursorcharpos(new_linenr, 0)
-  call s:move_cursor_to_col_text_end(a:col_idx)
-endfunction
-
-function! s:move_cursor_to_col_text_end(col_idx)
-  " move cursor to the end of text in a given table column
-  call search(printf('^|\(.\{-}|\)\{%d} .\{-}\zs\s*|',  a:col_idx))
-endfunction
-
-function! s:move_cursor_to_col_text_start(col_idx)
-  " move cursor to the start of text in a given table column
-  call search(printf('^|\(.\{-}|\)\{%d} \zs', a:col_idx))
 endfunction
 
 function! s:split_col_text(line, byte) "-> [String, String]
@@ -1306,23 +1326,6 @@ function! s:formatter_wrap_column(column, col_idx) dict "-> List[String]
   endfor
 
   return lines
-endfunction
-
-function! s:remove_column_trailing_empty_lines(column) "-> List[String]
-  let result = []
-  let empty_count = 0
-  for paragraph in a:column
-    if empty(paragraph)
-      let empty_count += 1
-    elseif empty_count > 0
-      call extend(result, repeat([''], empty_count))
-      let empty_count = 0
-      call add(result, paragraph)
-    else
-      call add(result, paragraph)
-    endif
-  endfor
-  return result
 endfunction
 
 function! s:formatter_format_rows(rows) dict "-> List[String]

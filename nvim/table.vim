@@ -157,12 +157,51 @@ let s:min_column_width = 5
 " Vim Interaction API
 " ===================
 
+function! s:au_insert_enter()
+  " callback for InsertEnter autocommand
+  if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
+    return
+  elseif get(b:, "table_working", 0)
+    return
+  endif
+
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if s:matches(line, s:table_make_pattern)
+    return
+  elseif s:matches(line, s:table_sep_pattern)
+    return
+  elseif ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let this_col_idx = s:col_idx_from_line(line, colnr)
+  let header = s:find_first_sep(linenr)
+  let cols = s:cols_on_line(header)
+  let max_col_idx = s:max_col_idx_from_line(getline(header))
+  if this_col_idx > max_col_idx
+    return
+  endif
+
+  let b:table_wrap_colnr = 1
+  for col_idx in range(0, this_col_idx)
+    let column_width = cols[col_idx]
+    let b:table_wrap_colnr += column_width + 3
+  endfor
+
+  let b:table_wrap_colnr -= 1
+endfunction
+
 function! s:au_insert_leave()
   " callback for InsertLeave autocommand
   if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
     return
   elseif get(b:, "table_working", 0)
     return
+  endif
+
+  if exists("b:table_wrap_colnr")
+    unlet b:table_wrap_colnr
   endif
 
   let current_line = getline('.')
@@ -204,7 +243,6 @@ function! s:imap_tab() "-> mapping
   " key mapping evaluator for Tab
   let current_line = getline('.')
   if s:matches(current_line, s:table_pattern)
-    let b:table_working = 1
     return "\<Esc>\<Plug>(TableNextCell)i"
   else
     return "\<Tab>"
@@ -215,7 +253,6 @@ function! s:imap_stab() "-> mapping
   " key mapping evaluator for S-Tab
   let current_line = getline('.')
   if s:matches(current_line, s:table_pattern)
-    let b:table_working = 1
     return "\<Esc>\<Plug>(TablePrevCell)i"
   else
     return "\<S-Tab>"
@@ -238,6 +275,25 @@ function! s:imap_backspace() "-> mapping
     return "\<Esc>\<Plug>(TableJoinLine)i"
   else
     return "\<BS>"
+endfunction
+
+function! s:imap_space() "-> mapping
+  " key mapping evaluator for Space
+  if ! exists("b:table_wrap_colnr")
+    return "\<Space>"
+  endif
+
+  let [linenr, colnr] = s:cursor_pos()
+  let in_table = s:matches(getline(linenr), s:table_pattern)
+  if in_table && colnr >= b:table_wrap_colnr
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TableSplitLine)i"
+  elseif in_table
+    return "\<Space>"
+  else
+    unlet b:table_wrap_colnr
+    return "\<Space>"
+  endif
 endfunction
 
 function! s:nmap_left_curly() "-> mapping
@@ -281,6 +337,24 @@ function! s:nmap_O() "-> mapping
     return "\<Plug>(TableOpenAbove)"
   else
     return "O"
+  endif
+endfunction
+
+function! s:nmap_I() "-> mapping
+  " key mapping evaluator for I
+  if s:matches(getline('.'), s:table_pattern)
+    return "\<Plug>(TableLineInsert)"
+  else
+    return "I"
+  endif
+endfunction
+
+function! s:nmap_A() "-> mapping
+  " key mapping evaluator for A
+  if s:matches(getline('.'), s:table_pattern)
+    return "\<Plug>(TableLineAppend)"
+  else
+    return "A"
   endif
 endfunction
 
@@ -335,10 +409,6 @@ function! s:plug_next_cell()
     call setcursorcharpos(new_linenr, 0)
     call s:move_cursor_to_col_text_end(next_col_idx)
   endif
-
-  if exists("b:table_working")
-    unlet b:table_working
-  endif
 endfunction
 
 function! s:plug_prev_cell()
@@ -361,10 +431,6 @@ function! s:plug_prev_cell()
   else
     " prevent the cursor from wandering when it repeated leaves insert mode
     call setcursorcharpos(linenr, colnr + 1)
-  endif
-
-  if exists("b:table_working")
-    unlet b:table_working
   endif
 endfunction
 
@@ -615,7 +681,7 @@ function! s:plug_up_cell()
   call s:move_cursor_to_col_text_end(col_idx)
 endfunction
 
-function s:plug_next_paragraph()
+function! s:plug_next_paragraph()
   "handler for next_paragraph operation
   let [cur_linenr, cur_colnr] = s:cursor_pos()
   let line = getline(cur_linenr)
@@ -646,7 +712,7 @@ function s:plug_next_paragraph()
   call s:move_cursor_to_col_text_end(col_idx)
 endfunction
 
-function s:plug_prev_paragraph()
+function! s:plug_prev_paragraph()
   "handler for prev_paragraph operation
   let [cur_linenr, cur_colnr] = s:cursor_pos()
   let line = getline(cur_linenr)
@@ -767,6 +833,24 @@ function! s:plug_insert_row_below()
   call append(linenr, [substitute(line, '-', ' ', 'g'), line])
   call setcursorcharpos(linenr + 1, 0)
   call s:move_cursor_to_col_text_start(col_idx)
+  startinsert
+endfunction
+
+function! s:plug_line_insert()
+  " handler for line_insert operation
+  let [linenr, colnr] = s:cursor_pos()
+  let col_idx = s:col_idx_from_line(getline(linenr), colnr)
+  call setcursorcharpos(linenr, 0)
+  call s:move_cursor_to_col_text_start(col_idx)
+  startinsert
+endfunction
+
+function! s:plug_line_append()
+  " handler for line_append operation
+  let [linenr, colnr] = s:cursor_pos()
+  let col_idx = s:col_idx_from_line(getline(linenr), colnr)
+  call setcursorcharpos(linenr, 0)
+  call s:move_cursor_to_col_text_end(col_idx)
   startinsert
 endfunction
 
@@ -1283,6 +1367,7 @@ endfunction
 
 augroup table_edit
   autocmd!
+  autocmd InsertEnter * call <SID>au_insert_enter()
   autocmd InsertLeave * call <SID>au_insert_leave()
 augroup END
 
@@ -1316,15 +1401,20 @@ nnoremap <silent> <Plug>(TableOpenAbove) <CMD>call <SID>plug_open_above()<CR>
 nnoremap <silent> <Plug>(TableOpenBelow) <CMD>call <SID>plug_open_below()<CR>
 nnoremap <silent> <Plug>(TableInsertRowAbove) <CMD>call <SID>plug_insert_row_above()<CR>
 nnoremap <silent> <Plug>(TableInsertRowBelow) <CMD>call <SID>plug_insert_row_below()<CR>
+nnoremap <silent> <Plug>(TableLineInsert) <CMD>call <SID>plug_line_insert()<CR>
+nnoremap <silent> <Plug>(TableLineAppend) <CMD>call <SID>plug_line_append()<CR>
 
 inoremap <silent> <expr> <CR> <SID>imap_return()
 inoremap <silent> <expr> <Tab> <SID>imap_tab()
 inoremap <silent> <expr> <S-Tab> <SID>imap_stab()
 inoremap <silent> <expr> <BS> <SID>imap_backspace()
+inoremap <silent> <expr> <Space> <SID>imap_space()
 nnoremap <silent> <expr> { <SID>nmap_left_curly()
 nnoremap <silent> <expr> } <SID>nmap_right_curly()
 nnoremap <silent> <expr> o <SID>nmap_o()
 nnoremap <silent> <expr> O <SID>nmap_O()
+nnoremap <silent> <expr> I <SID>nmap_I()
+nnoremap <silent> <expr> A <SID>nmap_A()
 
 if ! get(g:, "table_inhibit_leader_keys", 0)
   nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>

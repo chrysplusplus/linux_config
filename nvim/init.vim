@@ -144,6 +144,10 @@ function! s:config_windowing_mappings()
   nnoremap <M-k> <C-W>k
   nnoremap <M-l> <C-W>l
   nnoremap <M-v> <C-W>v
+  nnoremap <M-S-h> <C-W>H
+  nnoremap <M-S-j> <C-W>J
+  nnoremap <M-S-k> <C-W>K
+  nnoremap <M-S-l> <C-W>L
 
   " Alt + t to split window to new tab
   nnoremap <M-t> <C-W>s<C-W>T
@@ -634,6 +638,10 @@ command! ClipMarkdownToHTML !~/scripts/clip_markdown_to_html.sh
 "   re-open last closed window in vertical
 command! UndoLastClose call UndoLastClose()
 
+" Scratch
+"   create a temporary scratch buffer
+command! Scratch new +set\ bt=nofile
+
 " =================
 " Vim Configuration
 " =================
@@ -670,6 +678,8 @@ set wildignore+=*.bak
 
 set nocompatible
 set hidden
+
+set mousemodel=extend
 
 " =====================
 " General Configuration

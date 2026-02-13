@@ -9,6 +9,8 @@ source ~/.config/nvim/table.vim
 let s:table_pattern = TableExposeVariable("table_pattern")
 let s:_table_imap_return = TableExposeFunction("imap_return")
 let s:_table_imap_backspace = TableExposeFunction("imap_backspace")
+let s:_table_nmap_o = TableExposeFunction("nmap_o")
+let s:_table_nmap_O = TableExposeFunction("nmap_O")
 
 function! s:in_table(text)
   return match(a:text, s:table_pattern) == 0
@@ -20,6 +22,14 @@ endfunction
 
 function! s:table_imap_backspace()
   return s:_table_imap_backspace()
+endfunction
+
+function! s:table_nmap_o()
+  return s:_table_nmap_o()
+endfunction
+
+function! s:table_nmap_O()
+  return s:_table_nmap_O()
 endfunction
 
 " ===================
@@ -50,6 +60,10 @@ function! s:config_vimwiki_mappings()
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
   " dispatch return key to table.vim and vimwiki
   inoremap <buffer><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
+  " dispatch o to table.vim and vimwiki
+  nmap <buffer><expr> o <SID>in_table(getline('.')) ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
+  " dispatch O to table.vim and vimwiki
+  nmap <buffer><expr> O <SID>in_table(getline('.')) ? <SID>table_nmap_O() : '<Plug>VimwikiListO'
 endfunction
 
 function! s:config_cpp_mappings()
@@ -89,8 +103,9 @@ function! s:config_telescope_mappings()
   nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
   " \em to pick a mark
   nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
-  " \ez to fuzzy find in the current buffer
+  " \ez and Alt-f to fuzzy find in the current buffer
   nnoremap <silent> <Leader>ez <CMD>Telescope current_buffer_fuzzy_find<CR>
+  nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
 endfunction
 
 function! s:config_leader_mappings()

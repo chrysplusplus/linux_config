@@ -610,15 +610,8 @@ function s:plug_next_paragraph()
     let is_this_line_blank = empty(trim(s:col_text_on_line(linenr, col_idx)))
     let is_next_line_blank = empty(trim(s:col_text_on_line(linenr + 1, col_idx)))
 
-    if is_this_line_blank
-    elseif is_next_line_blank && linenr == cur_linenr
-      call setcursorcharpos(linenr, 0)
-      call s:move_cursor_to_col_text_end(col_idx)
-      let [_, new_colnr] = s:cursor_pos()
-      if new_colnr > cur_colnr
-        return
-      endif
-    elseif is_next_line_blank
+    if is_next_line_blank && ! is_this_line_blank
+      let linenr += 1
       break
     endif
 
@@ -648,15 +641,8 @@ function s:plug_prev_paragraph()
     let is_this_line_blank = empty(trim(s:col_text_on_line(linenr, col_idx)))
     let is_prev_line_blank = empty(trim(s:col_text_on_line(linenr - 1, col_idx)))
 
-    if is_this_line_blank
-    elseif is_prev_line_blank && linenr == cur_linenr
-      call setcursorcharpos(linenr, 0)
-      call s:move_cursor_to_col_text_start(col_idx)
-      let [_, new_colnr] = s:cursor_pos()
-      if new_colnr < cur_colnr
-        return
-      endif
-    elseif is_prev_line_blank
+    if is_prev_line_blank && ! is_this_line_blank
+      let linenr -= 1
       break
     endif
 

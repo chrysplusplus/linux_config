@@ -642,6 +642,15 @@ command! UndoLastClose call UndoLastClose()
 "   create a temporary scratch buffer
 command! Scratch new +set\ bt=nofile
 
+" ReadMode
+"   toggle scrolloff setting for using j and k for easy reading
+command ReadMode
+      \ if &scrolloff == 0        |
+      \   setlocal scrolloff=999  |
+      \ else                      |
+      \   setlocal scrolloff<     |
+      \ endif
+
 " =================
 " Vim Configuration
 " =================

@@ -265,19 +265,24 @@ function! s:imap_backspace() "-> mapping
   " key mapping evaluator for Backspace
   let linenr = line('.')
   let line = getline(linenr)
-  if s:matches(line, s:table_make_pattern)
+  let cursor_is_at_col_start = s:is_cursor_at_col_start()
+  if linenr == 1
+    return "\<BS>"
+  elseif ! s:matches(line, s:table_pattern)
+    return "\<BS>"
+  elseif s:matches(line, s:table_make_pattern)
     return "\<BS>"
   elseif s:matches(line, s:table_sep_pattern)
     return "\<BS>"
-  elseif linenr == 1
+  elseif ! cursor_is_at_col_start
     return "\<BS>"
-  elseif ! s:matches(getline(linenr - 1), s:table_pattern)
-    return "\<BS>"
-  elseif s:matches(line, s:table_pattern) && s:is_cursor_at_col_start()
+  elseif s:matches(getline(linenr - 1), s:table_sep_pattern)
+    return ""
+  else
     let b:table_working = 1
     return "\<Esc>\<Plug>(TableJoinLine)i"
-  else
-    return "\<BS>"
+  endif
+
 endfunction
 
 function! s:imap_space() "-> mapping
@@ -369,19 +374,24 @@ function! s:imap_ctrl_w() "-> mapping
   " key mapping evaluator for Ctrl-W
   let linenr = line('.')
   let line = getline(linenr)
-  if s:matches(line, s:table_make_pattern)
+  let cursor_is_at_col_start = s:is_cursor_at_col_start()
+  if linenr == 1
+    return "\<C-W>"
+  elseif ! s:matches(line, s:table_pattern)
+    return "\<C-W>"
+  elseif s:matches(line, s:table_make_pattern)
     return "\<C-W>"
   elseif s:matches(line, s:table_sep_pattern)
     return "\<C-W>"
-  elseif linenr == 1
+  elseif ! cursor_is_at_col_start
     return "\<C-W>"
-  elseif ! s:matches(getline(linenr - 1), s:table_pattern)
-    return "\<C-W>"
-  elseif s:matches(line, s:table_pattern) && s:is_cursor_at_col_start()
+  elseif s:matches(getline(linenr - 1), s:table_sep_pattern)
+    return ""
+  else
     let b:table_working = 1
     return "\<Esc>\<Plug>(TableJoinLine)i"
-  else
-    return "\<C-W>"
+  endif
+
 endfunction
 
 function! s:plug_make()

@@ -361,6 +361,25 @@ function! s:nmap_A() "-> mapping
   endif
 endfunction
 
+function! s:imap_ctrl_w() "-> mapping
+  " key mapping evaluator for Ctrl-W
+  let linenr = line('.')
+  let line = getline(linenr)
+  if s:matches(line, s:table_make_pattern)
+    return "\<C-W>"
+  elseif s:matches(line, s:table_sep_pattern)
+    return "\<C-W>"
+  elseif linenr == 1
+    return "\<C-W>"
+  elseif ! s:matches(getline(linenr - 1), s:table_pattern)
+    return "\<C-W>"
+  elseif s:matches(line, s:table_pattern) && s:is_cursor_at_col_start()
+    let b:table_working = 1
+    return "\<Esc>\<Plug>(TableJoinLine)i"
+  else
+    return "\<C-W>"
+endfunction
+
 function! s:plug_make()
   " handler for make operation
   let linenr = line('.')
@@ -1453,6 +1472,7 @@ nnoremap <silent> <expr> I <SID>nmap_I()
 nnoremap <silent> <expr> A <SID>nmap_A()
 nnoremap <silent> [{ <Plug>(TableBegin)
 nnoremap <silent> ]} <Plug>(TableEnd)
+inoremap <silent> <expr> <C-w> <SID>imap_ctrl_w()
 
 if ! get(g:, "table_inhibit_leader_keys", 0)
   nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>

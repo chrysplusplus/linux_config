@@ -1247,8 +1247,12 @@ function! s:resize_table_at_cursor(...)
   if a:0 > 0
     let usr_column_width = str2nr(a:1)
   else
+    let opts = {}
+    let opts.prompt = "Column Width: "
+    let opts.default = cols[col_idx]
+    let opts.cancelreturn = cols[col_idx]
     call inputsave()
-    let usr_column_width = str2nr(input("Column Width: ", cols[col_idx]))
+    let usr_column_width = str2nr(input(opts))
     call inputrestore()
   endif
 
@@ -1259,6 +1263,8 @@ function! s:resize_table_at_cursor(...)
     echohl None
     return
   elseif usr_column_width == cols[col_idx]
+    redraw
+    echo "Column Width: " .. usr_column_width
     return
   endif
 

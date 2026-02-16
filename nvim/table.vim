@@ -857,6 +857,37 @@ function! s:plug_line_append()
   startinsert
 endfunction
 
+function! s:plug_table_begin()
+  " handler for table_begin operation
+  let linenr = line('.')
+  if ! s:matches(getline(linenr), s:table_pattern)
+    return
+  endif
+
+  let first_sep = s:find_first_sep(linenr)
+  if first_sep == 1
+    let first_sep = 2
+  endif
+
+  call setcursorcharpos(first_sep - 1, 0)
+endfunction
+
+function! s:plug_table_end()
+  " handler for table_end operation
+  let linenr = line('.')
+  if ! s:matches(getline(linenr), s:table_pattern)
+    return
+  endif
+
+  let last_sep = s:find_last_sep(linenr)
+  if last_sep == line('$')
+    let last_sep -= 1
+  endif
+
+  call setcursorcharpos(last_sep + 1, 0)
+endfunction
+
+
 " =========
 " Functions
 " =========
@@ -1406,6 +1437,8 @@ nnoremap <silent> <Plug>(TableInsertRowAbove) <CMD>call <SID>plug_insert_row_abo
 nnoremap <silent> <Plug>(TableInsertRowBelow) <CMD>call <SID>plug_insert_row_below()<CR>
 nnoremap <silent> <Plug>(TableLineInsert) <CMD>call <SID>plug_line_insert()<CR>
 nnoremap <silent> <Plug>(TableLineAppend) <CMD>call <SID>plug_line_append()<CR>
+nnoremap <silent> <Plug>(TableBegin) <CMD>call <SID>plug_table_begin()<CR>
+nnoremap <silent> <Plug>(TableEnd) <CMD>call <SID>plug_table_end()<CR>
 
 inoremap <silent> <expr> <CR> <SID>imap_return()
 inoremap <silent> <expr> <Tab> <SID>imap_tab()
@@ -1418,6 +1451,8 @@ nnoremap <silent> <expr> o <SID>nmap_o()
 nnoremap <silent> <expr> O <SID>nmap_O()
 nnoremap <silent> <expr> I <SID>nmap_I()
 nnoremap <silent> <expr> A <SID>nmap_A()
+nnoremap <silent> [{ <Plug>(TableBegin)
+nnoremap <silent> ]} <Plug>(TableEnd)
 
 if ! get(g:, "table_inhibit_leader_keys", 0)
   nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>

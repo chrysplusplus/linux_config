@@ -301,8 +301,10 @@ endfunction
 
 function! s:nmap_left_curly() "-> mapping
   " key mapping for {
-  let line = getline('.')
-  if s:matches(line, s:table_pattern)
+  let [linenr, colnr] = s:cursor_pos()
+  if colnr == 1
+    return "{"
+  elseif s:matches(getline(linenr), s:table_pattern)
     return "\<Plug>(TablePrevParagraph)"
   else
     return "{"
@@ -311,8 +313,10 @@ endfunction
 
 function! s:nmap_right_curly() "-> mapping
   " key mapping for }
-  let line = getline('.')
-  if s:matches(line, s:table_pattern)
+  let [linenr, colnr] = s:cursor_pos()
+  if colnr == 1
+    return "}"
+  elseif s:matches(getline(linenr), s:table_pattern)
     return "\<Plug>(TableNextParagraph)"
   else
     return "}"

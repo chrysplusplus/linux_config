@@ -145,6 +145,24 @@
 " mapping keys in vim.
 "
 " Defaults to 0
+"
+" Customisation Variable: g:table_jump_to_end
+"
+" If non-zero, the jump commands for moving between cells in a table will go
+" to the end of the text, rather than the beginning, which is the default
+" behaviour.
+"
+" Originally, the jump commands were implemented to move to the end of the
+" cell text, but I changed this due to my own personal preferences, and since
+" I can't really justify removing the old cold, I added this variable to
+" switch back to the old behaviour.
+"
+" My main reason for this change in behaviour was because I use these commands
+" to read through my tables, and it was pretty frustrating having to
+" left-brace my way to the beginning. Nore that <Leader>ti exists to enter
+" insert mode at the end of the cell text.
+"
+" Defaults to 0
 
 " ================
 " Script Constants
@@ -640,15 +658,27 @@ function! s:plug_left_cell()
   endif
 
   let col_idx -= 1
-  let bot_sep = s:find_next_sep(linenr)
-  if bot_sep == -1
-    return
+
+  if get(g:, 'table_jump_to_end', 0)
+    let bot_sep = s:find_next_sep(linenr)
+    if bot_sep == -1
+      return
+    endif
+
+    let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
+
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_end(col_idx)
+  else
+    let top_sep = s:find_prev_sep(linenr)
+    if top_sep == -1
+      return
+    endif
+
+    let new_linenr = top_sep + 1
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_start(col_idx)
   endif
-
-  let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
-
-  call setcursorcharpos(new_linenr, 0)
-  call s:move_cursor_to_col_text_end(col_idx)
 endfunction
 
 function! s:plug_right_cell()
@@ -671,9 +701,16 @@ function! s:plug_right_cell()
   endif
 
   let col_idx += 1
-  let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
-  call setcursorcharpos(new_linenr, 0)
-  call s:move_cursor_to_col_text_end(col_idx)
+
+  if get(g:, 'table_jump_to_end', 0)
+    let new_linenr = s:find_prev_non_empty_by_col_idx(bot_sep, col_idx)
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_end(col_idx)
+  else
+    let top_sep = s:find_prev_sep(linenr)
+    call setcursorcharpos(top_sep + 1, 0)
+    call s:move_cursor_to_col_text_start(col_idx)
+  endif
 endfunction
 
 function! s:plug_down_cell()
@@ -686,15 +723,24 @@ function! s:plug_down_cell()
 
   let col_idx = s:col_idx_from_line(line, colnr)
   let this_bot_sep = s:find_next_sep(linenr)
+  if this_bot_sep == -1
+    return
+  endif
+
   let last_sep = s:find_last_sep(this_bot_sep)
   if this_bot_sep == last_sep
     return
   endif
 
-  let next_bot_sep = s:find_next_sep(this_bot_sep)
-  let new_linenr = s:find_prev_non_empty_by_col_idx(next_bot_sep, col_idx)
-  call setcursorcharpos(new_linenr, 0)
-  call s:move_cursor_to_col_text_end(col_idx)
+  if get(g:, 'table_jump_to_end', 0)
+    let next_bot_sep = s:find_next_sep(this_bot_sep)
+    let new_linenr = s:find_prev_non_empty_by_col_idx(next_bot_sep, col_idx)
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_end(col_idx)
+  else
+    call setcursorcharpos(this_bot_sep + 1, 0)
+    call s:move_cursor_to_col_text_start(col_idx)
+  endif
 endfunction
 
 function! s:plug_up_cell()
@@ -707,14 +753,24 @@ function! s:plug_up_cell()
 
   let col_idx = s:col_idx_from_line(line, colnr)
   let prev_sep = s:find_prev_sep(linenr)
+  if prev_sep == -1
+    return
+  endif
+
   let first_sep = s:find_first_sep(prev_sep)
   if prev_sep == first_sep
     return
   endif
 
-  let new_linenr = s:find_prev_non_empty_by_col_idx(prev_sep, col_idx)
-  call setcursorcharpos(new_linenr, 0)
-  call s:move_cursor_to_col_text_end(col_idx)
+  if get(g:, 'table_jump_to_end', 0)
+    let new_linenr = s:find_prev_non_empty_by_col_idx(prev_sep, col_idx)
+    call setcursorcharpos(new_linenr, 0)
+    call s:move_cursor_to_col_text_end(col_idx)
+  else
+    let prev_prev_sep = s:find_prev_sep(prev_sep)
+    call setcursorcharpos(prev_prev_sep + 1, 0)
+    call s:move_cursor_to_col_text_start(col_idx)
+  endif
 endfunction
 
 function! s:plug_next_paragraph()

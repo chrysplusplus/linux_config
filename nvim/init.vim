@@ -597,6 +597,30 @@ augroup chrys_undolastclose
   autocmd WinClosed * let g:last_window_info = getwininfo(expand("<afile>"))[0]
 augroup END
 
+" UpdateModifiedDate
+"   find lines in the current buffer matching a pattern and update the line to
+"   the given datestring
+"
+"   For example:
+"     /\clast updated: / matches Last Updated: <date>
+"     and changes the <date>, which is everything on the line after the match
+function! UpdateModifiedDate(pattern, datestring)
+  let report_changes = 0
+  " pattern to only match on lines that need changing
+  let pattern = printf('%S\%%(%S\)\@!', a:pattern, a:datestring)
+  for match in matchbufline(bufnr(), pattern, 1, "$")
+    let new_text = slice(getline(match.lnum), 0, match.byteidx)
+    let new_text ..= match.text
+    let new_text ..= a:datestring
+    call setline(match.lnum, new_text)
+    let report_changes = 1
+  endfor
+
+  if report_changes
+    echomsg "Datestring updated"
+  endif
+endfunction
+
 " ========
 " Commands
 " ========
@@ -719,6 +743,7 @@ augroup chrys_ft_vimwiki
   autocmd FileType vimwiki command! -buffer -nargs=1 -complete=custom,vimwiki#tags#complete_tags
         \ ChryswikiGenerateTagLinks call call("vimwiki#tags#generate_tags", extend([1], vimwiki#tags#get_tags()->filter('v:val =~ "'..<f-args>..'"')))
   autocmd FileType vimwiki command! Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
+  autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?: ', getreg('d'))
 augroup END
 
 " set textwidth for markdown

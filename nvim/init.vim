@@ -794,6 +794,7 @@ let g:airline#extensions#wordcount#filetypes += ['vimwiki']
 " airline advanced customisation
 function! ChrysAirlineInit()
   let g:airline_section_x = airline#section#create(['%{TablineFlagsAndSymbols()}']) .. g:airline_section_x
+  let g:airline_section_y = ''
 endfunction
 
 augroup chrys_airline_init

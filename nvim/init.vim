@@ -59,7 +59,7 @@ function! s:config_vimwiki_mappings()
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
   " dispatch return key to table.vim and vimwiki
-  inoremap <buffer><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
+  inoremap <buffer><expr><silent> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
   " dispatch o to table.vim and vimwiki
   nmap <buffer><expr> o <SID>in_table(getline('.')) ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
   " dispatch O to table.vim and vimwiki
@@ -732,12 +732,14 @@ augroup END
 
 " disable line numbers in vimwiki
 " set textwidth for vimwiki
+" set iskeyword to include hyphens and apostrophes
 " disable suggestions for vimwiki
 " fix key mapping conflict with vimwiki and pear-tree
 " add command for link tag hierarchy TODO underused, maybe remove
 augroup chrys_ft_vimwiki
   autocmd!
   autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
+  autocmd FileType vimwiki setlocal iskeyword+=-,'
   autocmd FileType vimwiki let b:coc_suggest_disable = 1
   autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
   autocmd FileType vimwiki command! -buffer -nargs=1 -complete=custom,vimwiki#tags#complete_tags

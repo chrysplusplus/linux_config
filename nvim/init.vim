@@ -945,7 +945,12 @@ function! s:configure_onedark()
   highlight! clear NonText
   highlight! link NonText SpecialKey
   highlight! link DiagnosticError ErrorMsg
+
+  highlight! vimVar guifg=#abb2bf
+  highlight! vimUserFunc guifg=#abb2bf
+
   highlight! StatusLine guifg=#abb2bf guibg=#373f4c
+
   highlight! User1 guifg=#282c34 guibg=#98c379
   highlight! User2 guifg=#98c379 guibg=#373f4c
   highlight! User3 guifg=#282c34 guibg=#98c379 gui=bold

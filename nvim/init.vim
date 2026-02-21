@@ -227,42 +227,31 @@ augroup END
 " =================
 " Tabline Functions
 " =================
-" s:highlight_modified
-function! s:highlight_modified(tabline)
-  if &modified
-    return '%#Italic#' .. a:tabline .. '%#TabLineFill#*'
-  else
-    return a:tabline
+" s:highlight_if_modified
+function! s:highlight_if_modified(tabline)
+  return &modified ? '%#Italic#' .. a:tabline .. '%#TabLineFill#*' : a:tabline
 endfunction
 
-" CustomDefaultTabline
-function! CustomDefaultTabline()
-  let tabline = ''
-  if &previewwindow
-    let tabline .= ' [Preview]'
-  endif
+let g:tabline_defaults = {}
 
-  let tabline .= ' ' .. s:highlight_modified('%f') .. ' %='
-  return tabline
+" default tabline renderer
+function! g:tabline_defaults.renderer()
+  return ' ' .. s:highlight_if_modified('%f') .. ' %='
 endfunction
 
-" FileStatusLine
-function! FileStatusLine()
-  let tabline = ''
-  if &previewwindow
-    let tabline .= ' [Preview]'
-  endif
-
-  let tabline .= s:highlight_modified('%f')
-  return tabline
-endfunction
-
-" CurrentDirectoryDetail
-function! CurrentDirectoryDetail()
+" current directory renderer
+function! g:tabline_defaults.directory_detail()
   return '%1* %{fnamemodify(getcwd(), '':t'')} %*'
 endfunction
 
-let g:tabline_symbols = {
+" tab pages renderer
+function! g:tabline_defaults.tab_page_detail()
+  return tabpagenr('$') > 1 ? '%1* %{tabpagenr()} / %{tabpagenr(''$'')} %*' : ''
+endfunction
+
+let g:status_lights = {}
+
+let g:status_lights.symbols = {
       \ 'cursorline': '=',
       \ 'digraph':    '~',
       \ 'hlsearch':   'φ',
@@ -272,24 +261,18 @@ let g:tabline_symbols = {
       \ 'wrap':       'W',
       \ }
 
-" TablineSymbols
-"   display symbols to indicate specified settings
-function! TablineSymbols()
-  let symbols = ''
-  for [opt_name, symbol] in items(g:tabline_symbols)
-    let do_display = 0
-    execute 'let do_display = &' .. opt_name .. ' == v:true'
-    if !do_display
-      continue
+" status lights symbols renderer
+function! g:status_lights.symbols_renderer()
+  let lights = ''
+  for [optname, symbol] in items(g:status_lights.symbols)
+    if eval('&' .. optname)
+      let lights ..= symbol
     endif
-
-    let symbols .= symbol
   endfor
-
-  return symbols
+  return lights
 endfunction
 
-let g:tabline_flags = {
+let g:status_lights.flags = {
       \ 'virtualedit': ['ve', {val -> val != ''}],
       \ 'colorcolumn': ['cc', {val -> val != ''}],
       \ 'textwidth':   ['tw', {val -> val != 0}],
@@ -297,55 +280,66 @@ let g:tabline_flags = {
       \ 'scrolloff':   ['so', {val -> val != 0}],
       \ }
 
-" TablineFlags
-"   display flags when specified settings **don't** meet a default condition
-function! TablineFlags()
+" status lights flags renderer
+function! g:status_lights.flags_renderer()
   let flags = []
-  for opt_name in keys(g:tabline_flags)
-    let [flag_display, Condition_fn] = g:tabline_flags[opt_name]
-    execute 'let opt_val = &' .. opt_name
-    if !Condition_fn(opt_val)
-      continue
+  for [optname, data] in items(g:status_lights.flags)
+    let [display, Cond] = data
+    let optval = eval('&'..optname)
+    if Cond(optval)
+      call add(flags, printf("%S=%d", display, optval))
     endif
-
-    call add(flags, flag_display .. '=%4*' .. opt_val .. '%2*')
   endfor
-
   return flags->sort()->join(', ')
 endfunction
 
-" TabPageDetail
-function! TabPageDetail()
-  if tabpagenr('$') > 1
-    return '%1* %{tabpagenr()} / %{tabpagenr(''$'')} %*'
-  else
-    return ''
-  endif
+function! s:pad(text)
+  return len(a:text) > 0 ? a:text .. ' ' : ''
 endfunction
 
-" CustomNetrwTabline
-function! CustomNetrwTabline()
-  let tabline_netrw = ''
+" status lights combining renderer
+function! g:status_lights.flags_and_symbols_renderer()
+  let lights = ''
+  let lights ..= s:pad(g:status_lights.flags_renderer())
+  let lights ..= s:pad(g:status_lights.symbols_renderer())
+  return lights
+endfunction
 
-  let curdir = get(b:, "netrw_curdir")
-  let tabline_netrw .= ' %#Directory#' .. curdir .. '%#TabLineFill#'
+" use to define custom tablines for specific filetypes.
+"
+" The filetypes are used as keys in the dictionary and the values should be
+" funcrefs that accept no arguments and return a string representing the
+" custom tabline. This string can contain statusline fields, as the result is
+" evaluated again before being displayed. These functions should assume that
+" they are allowed to take up the maximum space possible using %= .
+let g:tabline_renderer = {}
+
+" netrw renderer
+function! g:tabline_renderer.netrw()
+  let tabline = ''
+
+  let cd = get(b:, 'netrw_curdir')
+  let tabline ..= ' ' .. cd
 
   let target = netrw#Expose("netrwmftgt")
-  let tabline_netrw .= ' target: ' .. target
-  let tabline_netrw .= '%='
-  return tabline_netrw
+  if target != 'n/a'
+    let tabline ..= ' (T %6*' .. target .. '%*)%='
+  else
+    let tabline ..= ' (T none)%='
+  endif
+  return tabline
 endfunction
 
-" HelpTabline
+" help renderer
 " could be more intelligent to report the last help term that was searched
 " but this will do for now
-function! HelpTabline()
+function! g:tabline_renderer.help()
   let title = expand('%:t:r') "report the name of help file
   return ' ' .. title .. '%='
 endfunction
 
-" TelescopeTabline
-function! TelescopeTabline()
+" TelescopePrompt renderer
+function! g:tabline_renderer.TelescopePrompt()
   return '%='
 endfunction
 
@@ -363,9 +357,8 @@ function! s:tabline_format_vimwiki_date(date)
   return day .. ' ' .. month .. ' ' .. year
 endfunction
 
-" VimwikiTabline
-function! VimwikiTabline()
-  let tabline = ''
+" vimwiki renderer
+function! g:tabline_renderer.vimwiki()
   let page = expand('%:t:r')
   let buf_subdir = vimwiki#vars#get_bufferlocal('subdir')
   let sub_path = substitute(buf_subdir, '\/\|\\', ' -> ', 'g')
@@ -374,46 +367,27 @@ function! VimwikiTabline()
     let wikiname = vimwiki#vars#get_wikilocal('path')
   endif
 
-  if buf_subdir == vimwiki#vars#get_wikilocal('diary_rel_path')
-    " if we're in the diary
-    if page == vimwiki#vars#get_wikilocal('diary_index')
-      " if we're on the diary index page
-      let tabline = ' ' .. wikiname .. ' Diary'
+  let diary_subdir = vimwiki#vars#get_wikilocal('diary_rel_path')
+  let diary_index = vimwiki#vars#get_wikilocal('diary_index')
+  let index = vimwiki#vars#get_wikilocal('index')
 
-    else
-      " otherwise
-      let tabline = ' ' .. wikiname .. ' Diary: '
-      let tabline .= s:tabline_format_vimwiki_date(page->split('-'))
-    endif
+  let tabline = ' ' .. wikiname
+  if buf_subdir == diary_subdir && page == diary_index
+    let tabline ..= ' Diary'
 
-  elseif page == vimwiki#vars#get_wikilocal('index') && sub_path == ''
-    " if we're on the wiki index page
-    let tabline = ' ' .. wikiname
+  elseif buf_subdir == diary_subdir
+    let tabline ..= ' Diary: '
+    let tabline ..= s:tabline_format_vimwiki_date(page->split('-'))
+
+  elseif page == index
+    let tabline = tabline
 
   else
-    " otherwise
     let page = substitute(page, '_', ' ', 'g')
-    let tabline = ' ' .. wikiname .. ' -> ' .. sub_path .. page
+    let tabline ..= ' -> ' .. sub_path .. page
   endif
 
-  return s:highlight_modified(tabline) .. ' ' .. ' %='
-endfunction
-
-" TablineFlagsAndSymbols
-"   combine tabline for flags and values
-function! TablineFlagsAndSymbols()
-  let tabline = ''
-  let flags = TablineFlags()
-  let tabline .= flags
-  if flags->len() > 0
-    let tabline .= ' '
-  endif
-  let symbols = TablineSymbols()
-  let tabline .= symbols
-  if symbols->len() > 0
-    let tabline .= ' '
-  endif
-  return tabline
+  return s:highlight_if_modified(tabline) .. '%='
 endfunction
 
 function! s:check_trailing_space(bufnr)
@@ -425,28 +399,6 @@ function! s:check_trailing_space(bufnr)
   endif
   " update the statusline (see CursorHold docs)
   let &ro = &ro
-endfunction
-
-function! Trailing()
-  let trailing_linenr = get(b:, "statusline_trailing_linenr", 0)
-  if trailing_linenr
-    return '%5* ! ' .. trailing_linenr .. ' '
-  else
-    return ''
-  endif
-endfunction
-
-function! WordCount()
-  if ! get(b:, "statusline_wordcount", 0)
-    return ''
-  endif
-
-  let info = wordcount()
-  if has_key(info, 'visual_words')
-    return '%3*' .. info.visual_words .. '%1* words '
-  else
-    return '%3*' .. info.words .. '%1* words '
-  endif
 endfunction
 
 function! s:check_branch_state(bufnr)
@@ -467,17 +419,6 @@ function! s:check_branch_state(bufnr)
   let state_info.dirty = len(branch_status.stdout) > 1
 endfunction
 
-function! StatuslineBranch()
-  let state_info = get(b:, "statusline_branch", {})
-  if empty(state_info)
-    return ''
-  elseif state_info.dirty
-    return printf("(%s!)", state_info.branch_name)
-  else
-    return printf("(%s)", state_info.branch_name)
-  endif
-endfunction
-
 augroup chrys_statusline
   autocmd!
   " check for trailing spaces in buffer
@@ -492,71 +433,79 @@ augroup chrys_statusline
   autocmd FileType text,markdown,help,vimwiki let b:statusline_wordcount = 1
 augroup END
 
+let g:statusline_fns = {}
+
+function! g:statusline_fns.trailing()
+  let trailing_linenr = get(b:, "statusline_trailing_linenr", 0)
+  if trailing_linenr
+    return '%5* ! ' .. trailing_linenr .. ' '
+  else
+    return ''
+  endif
+endfunction
+
+function! g:statusline_fns.wordcount()
+  if ! get(b:, "statusline_wordcount", 0)
+    return ''
+  endif
+
+  let info = wordcount()
+  if has_key(info, 'visual_words')
+    return '%3*' .. info.visual_words .. '%1* words '
+  else
+    return '%3*' .. info.words .. '%1* words '
+  endif
+endfunction
+
+function! g:statusline_fns.branch()
+  let state_info = get(b:, "statusline_branch", {})
+  if empty(state_info)
+    return ''
+  elseif state_info.dirty
+    return printf("(%s!)", state_info.branch_name)
+  else
+    return printf("(%s)", state_info.branch_name)
+  endif
+endfunction
+
 " CustomStatusline
 function! CustomStatusline()
   let statusline = ' '
   let statusline ..= '%*%<'
-  let statusline ..= '%{%FileStatusLine()%} '
-  let statusline ..= '%{%StatuslineBranch()%}'
+  let statusline ..= s:highlight_if_modified('%f') .. ' '
+  let statusline ..= '%{%g:statusline_fns.branch()%}'
   let statusline ..= '%='
   let statusline ..= '%2*%{&filetype}%* '
-  let statusline ..= '%2*%{%TablineFlagsAndSymbols()%}%*'
+  let statusline ..= '%2*%{%g:status_lights.flags_and_symbols_renderer()%}%*'
   let statusline ..= '%1* '
-  let statusline ..= '%{%WordCount()%}'
+  let statusline ..= '%{%g:statusline_fns.wordcount()%}'
   let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
-  let statusline ..= '%{%Trailing()%}'
+  let statusline ..= '%{%g:statusline_fns.trailing()%}'
   return statusline
 endfunction
 
-" TODO this code could also do with cleanup
-
-" flags for filetypes
-let g:tabline_ft = {}
-let g:tabline_ft.netrw = {'fn': function("CustomNetrwTabline")}
-let g:tabline_ft.help = {'fn': function("HelpTabline")}
-let g:tabline_ft.TelescopePrompt = {'fn': function("TelescopeTabline"), 'nofiletype': 1}
-let g:tabline_ft.vimwiki = {'fn': function("VimwikiTabline"), 'nofiletype': 1}
+function! s:get_tabline_renderer(ft)
+  if has_key(g:tabline_renderer, a:ft)
+    return 'g:tabline_renderer.' .. a:ft
+  else
+    return 'g:tabline_defaults.renderer'
+  endif
+endfunction
 
 " CustomTabline
 function! CustomTabline()
-  for ft in keys(g:tabline_ft)
-    if &filetype == ft
-      let tabline = ''
-      let tabline .= '%{%CurrentDirectoryDetail()%}'
-      let tabline .= '%{%' .. string(g:tabline_ft[ft].fn) .. '()%}'
-      if !g:tabline_ft[ft]->get("nofiletype")
-        let tabline .= ' [' .. ft .. '] '
-      endif
-      let tabline .= '%{%TabPageDetail()%}'
-      return tabline
-    endif
-  endfor
-
-  " when no tabline is defined for the current filetype
+  let renderer = s:get_tabline_renderer(&filetype)
   let tabline = ''
-  let tabline .= '%{%CurrentDirectoryDetail()%}'
-  let tabline .= '%{%CustomDefaultTabline()%}'
-  let tabline .= '%{%TabPageDetail()%}'
+  let tabline ..= '%{%g:tabline_defaults.directory_detail()%}'
+  let tabline ..= '%{%'..renderer..'()%}'
+  let tabline ..= '%{%g:tabline_defaults.tab_page_detail()%}'
   return tabline
 endfunction
 
 " GoyoTabline
 function! GoyoTabline()
-  for ft in keys(g:tabline_ft)
-    if &filetype == ft
-      let tabline = ''
-      let tabline .= '%=%{%' .. string(g:tabline_ft[ft].fn) .. '()%}'
-      if !g:tabline_ft[ft]->get("nofiletype")
-        let tabline .= ' [' .. ft .. '] '
-      endif
-      return tabline
-    endif
-  endfor
-
-  " when no tabline is defined for the current filetype
-  let tabline = ''
-  let tabline .= '%=%{%CustomDefaultTabline()%}'
-  return tabline
+  let renderer = s:get_tabline_renderer(&filetype)
+  return '%=%{%'..renderer..'()%}'
 endfunction
 
 " =========
@@ -958,6 +907,7 @@ function! s:configure_onedark()
   highlight! User3 guifg=#282c34 guibg=#98c379 gui=bold
   highlight! User4 guifg=#98c379 guibg=#373f4c gui=italic
   highlight! User5 guifg=#282c34 guibg=#e06c75
+  highlight! User6 guifg=#98c379
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()

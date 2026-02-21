@@ -246,6 +246,17 @@ function! CustomDefaultTabline()
   return tabline
 endfunction
 
+" FileStatusLine
+function! FileStatusLine()
+  let tabline = ''
+  if &previewwindow
+    let tabline .= ' [Preview]'
+  endif
+
+  let tabline .= s:highlight_modified('%f')
+  return tabline
+endfunction
+
 " CurrentDirectoryDetail
 function! CurrentDirectoryDetail()
   return '%1* %{fnamemodify(getcwd(), '':t'')} %*'
@@ -461,9 +472,9 @@ function! StatuslineBranch()
   if empty(state_info)
     return ''
   elseif state_info.dirty
-    return '%1* ' .. state_info.branch_name .. '! %*'
+    return printf("(%s!)", state_info.branch_name)
   else
-    return '%1* ' .. state_info.branch_name .. ' %*'
+    return printf("(%s)", state_info.branch_name)
   endif
 endfunction
 
@@ -483,10 +494,10 @@ augroup END
 
 " CustomStatusline
 function! CustomStatusline()
-  let statusline = ''
-  let statusline ..= '%{%StatuslineBranch()%}'
+  let statusline = ' '
   let statusline ..= '%*%<'
-  let statusline ..= '%{%CustomDefaultTabline()%}'
+  let statusline ..= '%{%FileStatusLine()%} '
+  let statusline ..= '%{%StatuslineBranch()%}'
   let statusline ..= '%='
   let statusline ..= '%2*%{%TablineFlagsAndSymbols()%}%*'
   let statusline ..= '%1* '
@@ -734,7 +745,7 @@ command! Scratch new +set\ bt=nofile
 
 " ReadMode
 "   toggle scrolloff setting for using j and k for easy reading
-command ReadMode
+command! ReadMode
       \ if &scrolloff == 0        |
       \   setlocal scrolloff=999  |
       \ else                      |
@@ -933,13 +944,12 @@ function! s:configure_onedark()
   highlight! SpecialKey guifg=#505762
   highlight! clear NonText
   highlight! link NonText SpecialKey
-  highlight! tabline_purple ctermfg=235 ctermbg=170 guifg=#282c34 guibg=#c678dd
   highlight! link DiagnosticError ErrorMsg
-  highlight! Italic cterm=italic gui=italic
+  highlight! StatusLine guifg=#abb2bf guibg=#373f4c
   highlight! User1 guifg=#282c34 guibg=#98c379
-  highlight! User2 guifg=#98c379
+  highlight! User2 guifg=#98c379 guibg=#373f4c
   highlight! User3 guifg=#282c34 guibg=#98c379 gui=bold
-  highlight! User4 guifg=#98c379 gui=italic
+  highlight! User4 guifg=#98c379 guibg=#373f4c gui=italic
   highlight! User5 guifg=#282c34 guibg=#e06c75
 endfunction
 

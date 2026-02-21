@@ -424,11 +424,15 @@ augroup chrys_statusline
   " check for trailing spaces in buffer
   autocmd CursorHold * call s:check_trailing_space(bufnr())
   autocmd BufReadPost * call s:check_trailing_space(bufnr())
+  autocmd BufEnter * call s:check_trailing_space(bufnr())
   autocmd BufWritePost * call s:check_trailing_space(bufnr())
+
   " check for branch information
   autocmd CursorHold * call s:check_branch_state(bufnr())
   autocmd BufReadPost * call s:check_branch_state(bufnr())
+  autocmd BufEnter * call s:check_branch_state(bufnr())
   autocmd BufWritePost * call s:check_branch_state(bufnr())
+
   " filetypes for displaying wordcount
   autocmd FileType text,markdown,help,vimwiki let b:statusline_wordcount = 1
 augroup END

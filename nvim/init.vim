@@ -499,6 +499,7 @@ function! CustomStatusline()
   let statusline ..= '%{%FileStatusLine()%} '
   let statusline ..= '%{%StatuslineBranch()%}'
   let statusline ..= '%='
+  let statusline ..= '%2*%{&filetype}%* '
   let statusline ..= '%2*%{%TablineFlagsAndSymbols()%}%*'
   let statusline ..= '%1* '
   let statusline ..= '%{%WordCount()%}'
@@ -945,6 +946,7 @@ function! s:configure_onedark()
   highlight! clear NonText
   highlight! link NonText SpecialKey
   highlight! link DiagnosticError ErrorMsg
+  highlight! Italic cterm=italic gui=italic
 
   highlight! vimVar guifg=#abb2bf
   highlight! vimUserFunc guifg=#abb2bf

@@ -179,47 +179,47 @@ function! s:config_bracket_swapping_mappings()
   nnoremap <silent> <Leader>r} m'%r}`'r{
 endfunction
 
-" ================
-" General Mappings
-" ================
+function! s:config_misc_mappings()
+  " Ctrl-S to save current file in normal and insert mode
+  nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
+  imap <C-S> <C-O><C-S>
 
-" Convenience mappings
-" Ctrl-S to save the current file
-nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
-" Ctrl-S in insert mode to save the current file without leaving insert mode
-imap <C-S> <C-O><C-S>
+  " Load and make view on F5 and Shift+F5 respectively
+  nnoremap <F5> <CMD>call SafeLoadView()<CR>
+  nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
 
-" Load view and make view set to F5 and Shift+F5 respectively
-nnoremap <F5> <CMD>call SafeLoadView()<CR>
-nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
+  " Ctrl-Backspace to Ctrl-W in insert and command mode
+  imap <C-H> <C-W>
+  cmap <C-H> <C-W>
 
-" Ctrl-Backspace to Ctrl-W in Insert and Command mode
-imap <C-H> <C-W>
-cmap <C-H> <C-W>
+  " Esc to escape terminal
+  tmap <C-[> <C-\><C-N>
 
-" Esc to escape terminal
-tmap <C-[> <C-\><C-N>
+  " Q to format paragraph without jumping
+  nnoremap Q m'gqap`'
 
-" Q to format paragraph (similar to vim)
-nnoremap Q <CMD>FormatParagraph<CR>
+  " J to join lines without jumping (sets last mark)
+  nnoremap J m'J`'
+endfunction
 
-" J to join lines without jumping (sets last mark)
-nnoremap J m'J`'
-
+" global mappings
+call s:config_misc_mappings()
 call s:config_bracket_swapping_mappings()
 call s:config_windowing_mappings()
 call s:config_leader_mappings()
 call s:config_telescope_mappings()
 call s:config_table_mappings()
 
-" filetype mappings
+" filetype-specific mappings
 augroup chrys_ft_mappings
   autocmd!
   autocmd FileType vimwiki call s:config_vimwiki_mappings()
   autocmd FileType cpp call s:config_cpp_mappings()
-  " <C-J> in insert mode in python files refreshes coc
-  autocmd FileType python inoremap <silent> <C-J> <CMD>call coc#refresh()<CR>
   autocmd FileType netrw call s:config_netrw_mappings()
+
+  " <C-J> in insert mode in python files refreshes coc
+  autocmd FileType python inoremap <buffer> <silent> <C-J> <CMD>call coc#refresh()<CR>
+
   " restore default backspace mapping for filetypes with pear-tree disabled
   autocmd FileType TelescopePrompt inoremap <buffer> <BS> <BS>
 augroup END
@@ -666,25 +666,6 @@ command! -register Qdate
       \   echo "Set \"" .. '<reg>' .. " to \"" .. getreg('<reg>') .. "\"" |
       \ endif
 
-" FormatParagraph
-"   format a paragraph, restoring original mark
-command! FormatParagraph normal m'gqap`'
-
-" ClearReg
-"   clears specified register
-command! -register ClearReg
-      \ if !empty('<reg>') |
-      \   call setreg('<reg>','') |
-      \ endif
-
-" ClipHTMLToMarkdown
-" ClipMarkdownToHTML
-"   TODO more testing required (usage may have broken)
-"   commands for converting clipboard buffer to/from markdown
-"   (for now this is linux only)
-command! ClipHTMLToMarkdown !~/scripts/clip_html_to_markdown.sh
-command! ClipMarkdownToHTML !~/scripts/clip_markdown_to_html.sh
-
 " UndoLastClose
 "   re-open last closed window in vertical
 command! UndoLastClose call UndoLastClose()
@@ -705,21 +686,18 @@ command! ReadMode
 " =================
 " Vim Configuration
 " =================
+set hidden
+set incsearch
+set nohlsearch
 set number
 set relativenumber
-syntax enable
-set ruler
-set nohlsearch " looks better
-set incsearch
-set path+=**
-set mousescroll=ver:1,hor:6
-set laststatus=3
 set sidescroll=0
 
-" set custom tabline
+" set custom statusline and tabline
+set laststatus=3
+set statusline=%!CustomStatusline()
 set showtabline=2
 set tabline=%!CustomTabline()
-set statusline=%!CustomStatusline()
 
 " default wrap settings
 set nowrap
@@ -731,16 +709,15 @@ set tabstop=2
 set shiftwidth=2
 set expandtab
 
-" wildignore
-"   also inspiration for .gitignore files
+" path and ignore
+set path+=**
 set wildignore+=*/__pycache__
 set wildignore+=*/__pycache__/*
 set wildignore+=*.bak
 
-set nocompatible
-set hidden
-
+" mouse
 set mousemodel=extend
+set mousescroll=ver:1,hor:6
 
 " =====================
 " General Configuration
@@ -758,31 +735,21 @@ augroup chrys_quickfix
   autocmd QuickfixCmdPost make call PromptQuickfix()
 augroup END
 
-" disable line numbers in vimwiki
-" set textwidth for vimwiki
-" set iskeyword to include hyphens and apostrophes
-" disable suggestions for vimwiki
-" fix key mapping conflict with vimwiki and pear-tree
-" add command for link tag hierarchy TODO underused, maybe remove
-augroup chrys_ft_vimwiki
-  autocmd!
-  autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
-  autocmd FileType vimwiki setlocal iskeyword+=-,'
-  autocmd FileType vimwiki let b:coc_suggest_disable = 1
-  autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
-  autocmd FileType vimwiki command! -buffer -nargs=1 -complete=custom,vimwiki#tags#complete_tags
-        \ ChryswikiGenerateTagLinks call call("vimwiki#tags#generate_tags", extend([1], vimwiki#tags#get_tags()->filter('v:val =~ "'..<f-args>..'"')))
-  autocmd FileType vimwiki command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
-  autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?:', printf(" %S", getreg('d')))
-augroup END
-
-" set textwidth for markdown
-" disable suggestions for markdown
-" set conceallevel for markdown
+" markdown-specific configuration
 augroup chrys_ft_markdown
   autocmd!
-  autocmd FileType markdown setlocal nonumber norelativenumber textwidth=80 conceallevel=2
+
+  " disable line numbers
+  autocmd FileType markdown setlocal nonumber norelativenumber
+
+  " set textwidth for markdown
+  autocmd FileType markdown setlocal textwidth=80
+
+  " disable suggestions for markdown
   autocmd FileType markdown let b:coc_suggest_disable = 1
+
+  " set conceallevel for markdown
+  autocmd FileType markdown setlocal conceallevel=2
 augroup END
 
 " =======
@@ -812,8 +779,13 @@ Plug 'vlime/vlime', {'rtp': 'vim/'}
 
 call plug#end()
 
-" vimwiki customisation
+" =======
+" Vimwiki
+" =======
+
+" disable temporary wikis
 let g:vimwiki_global_ext = 0
+
 "   disable vimwiki tables in preference for table.vim
 let g:vimwiki_table_auto_fmt = 0
 let g:vimwiki_key_mappings = {
@@ -821,26 +793,29 @@ let g:vimwiki_key_mappings = {
       \ 'table_mappings': 0,
       \ }
 
-" pear_tree configuration
-let g:pear_tree_ft_disabled = ['TelescopePrompt']
-let g:pear_tree_repeatable_expand = 0
+augroup chrys_ft_vimwiki
+  autocmd!
 
-" telescope configuration
-"   map i_Ctrl-Backspace to backspace
-"   map i_Ctrl-Q to select horizontal
-lua require("telescope").setup{
-      \ defaults = {
-      \   mappings = {
-      \     i = {
-      \       ["<C-_>"] = function()
-      \         vim.cmd [[normal! bcw]]
-      \       end,
-      \       ["<C-Q>"] = require("telescope.actions").select_vertical,
-      \     }
-      \   }
-      \ }}
+  " disable line numbers
+  autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
 
-" my wikis
+  " set textwidth to 80
+  autocmd FileType vimwiki setlocal textwidth=80
+
+  " include hyphens and apostrophes in words
+  autocmd FileType vimwiki setlocal iskeyword+=-,'
+
+  " Vcd change current directory to wiki root (vimwiki only)
+  autocmd FileType vimwiki command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
+
+  " auto update last modified date text
+  autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?:', printf(" %S", getreg('d')))
+
+  " fix conflicts with other plugins
+  autocmd FileType vimwiki let b:coc_suggest_disable = 1
+  autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
+augroup END
+
 let personal_wiki = {}
 let personal_wiki.path = '~/vimwiki/'
 let personal_wiki.name = 'Personal Wiki'
@@ -876,10 +851,59 @@ let techtona_wiki.auto_generate_tags = 1
 
 let g:vimwiki_list = [personal_wiki, notes_wiki, techtona_wiki]
 
-" coc_nvim configuration
-let g:coc_snippet_prev = ''
+" =========
+" Pear Tree
+" =========
 
-" onedark customisation
+" disable for telescope prompt buffers
+let g:pear_tree_ft_disabled = ['TelescopePrompt']
+
+" disable unexpected behaviour when repeating text insert with characters
+" recognised by pear-tree
+let g:pear_tree_repeatable_expand = 0
+
+" =========
+" Telescope
+" =========
+
+" map i_Ctrl-Backspace to backspace
+" map i_Ctrl-Q to select horizontal
+lua require("telescope").setup{
+      \ defaults = {
+      \   mappings = {
+      \     i = {
+      \       ["<C-_>"] = function()
+      \         vim.cmd [[normal! bcw]]
+      \       end,
+      \       ["<C-Q>"] = require("telescope.actions").select_vertical,
+      \     }
+      \   }
+      \ }}
+
+" ====
+" Goyo
+" ====
+
+let g:goyo_width = 85
+
+" configure display during goyo
+function! s:goyo_enter()
+  set showtabline=2
+  set tabline=%!GoyoTabline()
+endfunction
+
+function! s:goyo_leave()
+  set showtabline=2
+  set tabline=%!CustomTabline()
+endfunction
+
+autocmd! User GoyoEnter nested call <SID>goyo_enter()
+autocmd! User GoyoLeave nested call <SID>goyo_leave()
+
+" ===============
+" Onedark (theme)
+" ===============
+
 function! s:configure_onedark()
   let g:onedark_terminal_italics = 1
 
@@ -912,24 +936,6 @@ endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()
 
-" goyo configuration
-let g:goyo_width = 85
-
-" configure display during goyo
-function! s:goyo_enter()
-  set showtabline=2
-  set tabline=%!GoyoTabline()
-endfunction
-
-function! s:goyo_leave()
-  set showtabline=2
-  set tabline=%!CustomTabline()
-endfunction
-
-autocmd! User GoyoEnter nested call <SID>goyo_enter()
-autocmd! User GoyoLeave nested call <SID>goyo_leave()
-
-" Colorscheme and Highlighting
 set termguicolors
 colorscheme onedark
 

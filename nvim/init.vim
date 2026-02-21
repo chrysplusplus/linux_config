@@ -248,7 +248,7 @@ endfunction
 
 " CurrentDirectoryDetail
 function! CurrentDirectoryDetail()
-  return '%#airline_a# %{fnamemodify(getcwd(), '':t'')} %#TabLineFill#'
+  return '%1* %{fnamemodify(getcwd(), '':t'')} %*'
 endfunction
 
 let g:tabline_symbols = {
@@ -297,7 +297,7 @@ function! TablineFlags()
       continue
     endif
 
-    call add(flags, flag_display .. '=' .. opt_val)
+    call add(flags, flag_display .. '=%4*' .. opt_val .. '%2*')
   endfor
 
   return flags->sort()->join(', ')
@@ -306,7 +306,7 @@ endfunction
 " TabPageDetail
 function! TabPageDetail()
   if tabpagenr('$') > 1
-    return '%#airline_a# %{tabpagenr()} / %{tabpagenr(''$'')} %#TabLineFill#'
+    return '%1* %{tabpagenr()} / %{tabpagenr(''$'')} %*'
   else
     return ''
   endif
@@ -352,29 +352,6 @@ function! s:tabline_format_vimwiki_date(date)
   return day .. ' ' .. month .. ' ' .. year
 endfunction
 
-" s:get_vimwiki_last_header()
-"   returns current header in wiki file
-function! s:get_vimwiki_last_header()
-  let linenr = line('.')
-  let headers = vimwiki#base#collect_headers()
-  let last_header = []
-  for header in headers
-    if header[0] <= linenr
-      let last_header = header
-
-    else
-      break
-    endif
-  endfor
-
-  if !empty(last_header)
-    return repeat('#', last_header[1]) .. ' %#VimwikiHeader1#' .. last_header[2]
-          \ .. '%#TabLineFill#'
-  else
-    return ''
-  endif
-endfunction
-
 " VimwikiTabline
 function! VimwikiTabline()
   let tabline = ''
@@ -408,8 +385,6 @@ function! VimwikiTabline()
     let tabline = ' ' .. wikiname .. ' -> ' .. sub_path .. page
   endif
 
-  "return s:highlight_modified(tabline) .. ' ' .. s:get_vimwiki_last_header() ..
-  "      \' %='
   return s:highlight_modified(tabline) .. ' ' .. ' %='
 endfunction
 
@@ -428,6 +403,97 @@ function! TablineFlagsAndSymbols()
     let tabline .= ' '
   endif
   return tabline
+endfunction
+
+function! s:check_trailing_space(bufnr)
+  let matches = matchbufline(a:bufnr, '\s\+$', 1, '$')
+  if empty(matches)
+    call setbufvar(a:bufnr, "statusline_trailing_linenr", 0)
+  else
+    call setbufvar(a:bufnr, "statusline_trailing_linenr", matches[0].lnum)
+  endif
+  " update the statusline (see CursorHold docs)
+  let &ro = &ro
+endfunction
+
+function! Trailing()
+  let trailing_linenr = get(b:, "statusline_trailing_linenr", 0)
+  if trailing_linenr
+    return '%5* ! ' .. trailing_linenr .. ' '
+  else
+    return ''
+  endif
+endfunction
+
+function! WordCount()
+  if ! get(b:, "statusline_wordcount", 0)
+    return ''
+  endif
+
+  let info = wordcount()
+  if has_key(info, 'visual_words')
+    return '%3*' .. info.visual_words .. '%1* words '
+  else
+    return '%3*' .. info.words .. '%1* words '
+  endif
+endfunction
+
+function! s:check_branch_state(bufnr)
+  let git_dir = FugitiveGitDir(a:bufnr)
+  if empty(git_dir)
+    return
+  endif
+
+  let state_info = getbufvar(a:bufnr, "statusline_branch", {})
+  if empty(state_info)
+    let state_info.branch_name = FugitiveHead(10, a:bufnr)
+    let state_info.git_dir = git_dir
+    let state_info.dirty = 0
+    call setbufvar(a:bufnr, "statusline_branch", state_info)
+  endif
+
+  let branch_status = FugitiveExecute(["status", "--porcelain"], a:bufnr)
+  let state_info.dirty = len(branch_status.stdout) > 1
+endfunction
+
+function! StatuslineBranch()
+  let state_info = get(b:, "statusline_branch", {})
+  if empty(state_info)
+    return ''
+  elseif state_info.dirty
+    return '%1* ' .. state_info.branch_name .. '! %*'
+  else
+    return '%1* ' .. state_info.branch_name .. ' %*'
+  endif
+endfunction
+
+augroup chrys_statusline
+  autocmd!
+  " check for trailing spaces in buffer
+  autocmd CursorHold * call s:check_trailing_space(bufnr())
+  autocmd BufReadPost * call s:check_trailing_space(bufnr())
+  autocmd BufWritePost * call s:check_trailing_space(bufnr())
+  " check for branch information
+  autocmd CursorHold * call s:check_branch_state(bufnr())
+  autocmd BufReadPost * call s:check_branch_state(bufnr())
+  autocmd BufWritePost * call s:check_branch_state(bufnr())
+  " filetypes for displaying wordcount
+  autocmd FileType text,markdown,help,vimwiki let b:statusline_wordcount = 1
+augroup END
+
+" CustomStatusline
+function! CustomStatusline()
+  let statusline = ''
+  let statusline ..= '%{%StatuslineBranch()%}'
+  let statusline ..= '%*%<'
+  let statusline ..= '%{%CustomDefaultTabline()%}'
+  let statusline ..= '%='
+  let statusline ..= '%2*%{%TablineFlagsAndSymbols()%}%*'
+  let statusline ..= '%1* '
+  let statusline ..= '%{%WordCount()%}'
+  let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
+  let statusline ..= '%{%Trailing()%}'
+  return statusline
 endfunction
 
 " TODO this code could also do with cleanup
@@ -692,6 +758,7 @@ set sidescroll=0
 " set custom tabline
 set showtabline=2
 set tabline=%!CustomTabline()
+set statusline=%!CustomStatusline()
 
 " default wrap settings
 set nowrap
@@ -766,9 +833,6 @@ augroup END
 call plug#begin('~/.config/nvim/plugged')
 Plug 'joshdick/onedark.vim'
 
-Plug 'vim-airline/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
-
 Plug 'vimwiki/vimwiki'
 
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
@@ -786,23 +850,6 @@ Plug 'junegunn/goyo.vim'
 Plug 'vlime/vlime', {'rtp': 'vim/'}
 
 call plug#end()
-
-" airline customisation
-let g:airline_symbols_ascii = 1
-"   call to function set defaults for filetypes variable, which we then extend
-call airline#extensions#wordcount#apply()
-let g:airline#extensions#wordcount#filetypes += ['vimwiki']
-
-" airline advanced customisation
-function! ChrysAirlineInit()
-  let g:airline_section_x = airline#section#create(['%{TablineFlagsAndSymbols()}']) .. g:airline_section_x
-  let g:airline_section_y = ''
-endfunction
-
-augroup chrys_airline_init
-  autocmd!
-  autocmd User AirlineAfterInit call ChrysAirlineInit()
-augroup END
 
 " vimwiki customisation
 let g:vimwiki_global_ext = 0
@@ -874,7 +921,6 @@ let g:coc_snippet_prev = ''
 " onedark customisation
 function! s:configure_onedark()
   let g:onedark_terminal_italics = 1
-  let g:airline_theme = 'onedark'
 
   " onedark comment highlighting is too dark for my taste
   call onedark#extend_highlight("Comment", { "fg" : { "gui" : "#7C828C" } })
@@ -890,6 +936,11 @@ function! s:configure_onedark()
   highlight! tabline_purple ctermfg=235 ctermbg=170 guifg=#282c34 guibg=#c678dd
   highlight! link DiagnosticError ErrorMsg
   highlight! Italic cterm=italic gui=italic
+  highlight! User1 guifg=#282c34 guibg=#98c379
+  highlight! User2 guifg=#98c379
+  highlight! User3 guifg=#282c34 guibg=#98c379 gui=bold
+  highlight! User4 guifg=#98c379 gui=italic
+  highlight! User5 guifg=#282c34 guibg=#e06c75
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()

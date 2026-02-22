@@ -488,6 +488,19 @@ function! CustomStatusline()
   return statusline
 endfunction
 
+" QuickfixStatusline
+function! QuickfixStatusline()
+  "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''} %=%-15(%l,%c%V%) %P
+  let statusline = ' '
+  let statusline ..= "%*%<%t %{exists('w:quickfix_title') ? w:quickfix_title : ''}"
+  let statusline ..= '%='
+  let statusline ..= '%2*%{&filetype}%* '
+  let statusline ..= '%2*%{%g:status_lights.flags_and_symbols_renderer()%}%*'
+  let statusline ..= '%1* '
+  let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
+  return statusline
+endfunction
+
 function! s:get_tabline_renderer(ft)
   if has_key(g:tabline_renderer, a:ft)
     return 'g:tabline_renderer.' .. a:ft
@@ -756,6 +769,12 @@ augroup chrys_ft_markdown
   autocmd FileType markdown setlocal conceallevel=2
 augroup END
 
+" quickfix-specific
+augroup chrys_ft_qf
+  autocmd!
+  autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
+augroup END
+
 " =======
 " Plugins
 " =======
@@ -927,6 +946,8 @@ function! s:configure_onedark()
 
   highlight! vimVar guifg=#abb2bf
   highlight! vimUserFunc guifg=#abb2bf
+
+  highlight! qfText guifg=#abb2bf
 
   highlight! StatusLine guifg=#abb2bf guibg=#373f4c
 

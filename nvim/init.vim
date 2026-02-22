@@ -290,7 +290,7 @@ function! g:status_lights.flags_renderer()
       call add(flags, printf("%S=%d", display, optval))
     endif
   endfor
-  return flags->sort()->join(', ')
+  return flags->sort()->join(' ')
 endfunction
 
 function! s:pad(text)

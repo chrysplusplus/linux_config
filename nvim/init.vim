@@ -948,6 +948,7 @@ function! s:configure_onedark()
   highlight! vimUserFunc guifg=#abb2bf
 
   highlight! qfText guifg=#abb2bf
+  highlight! qfLineNr guifg=#abb2bf
 
   highlight! StatusLine guifg=#abb2bf guibg=#373f4c
 

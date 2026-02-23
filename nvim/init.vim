@@ -455,10 +455,11 @@ function! g:statusline_fns.wordcount()
 
   let info = wordcount()
   if has_key(info, 'visual_words')
-    return '%3*' .. info.visual_words .. '%1* words '
+    let words = info.visual_words
   else
-    return '%3*' .. info.words .. '%1* words '
+    let words = info.words
   endif
+  return '%3*' .. Pprint_number(words) .. '%1* words '
 endfunction
 
 function! g:statusline_fns.branch()
@@ -663,6 +664,22 @@ function! UpdateModifiedDate(pattern, datestring)
   if report_changes
     echomsg "Datestring updated"
   endif
+endfunction
+
+let g:thousands_sep = ','
+
+function! Pprint_number(num)
+  if type(a:num) != type(0)
+    return num
+  endif
+
+  let as_str = string(a:num)
+  let result = []
+  while len(as_str) > 0
+    call add(result, slice(as_str, -3))
+    let as_str = slice(as_str, 0, -3)
+  endwhile
+  return join(reverse(result), g:thousands_sep)
 endfunction
 
 " ========

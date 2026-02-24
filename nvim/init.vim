@@ -1065,6 +1065,9 @@ augroup chrys_ft_vimwiki
   " auto update last modified date text
   autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?:', printf(" %S", getreg('d')))
 
+  " TodayHeader jump to header with today's date (vimwiki only)
+  autocmd FileType vimwiki command! -buffer TodayHeader call search(printf('^#\+ %s', getreg('d')))
+
   " fix conflicts with other plugins
   autocmd FileType vimwiki let b:coc_suggest_disable = 1
   autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0

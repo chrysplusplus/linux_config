@@ -81,7 +81,7 @@ function! s:config_netrw_mappings()
   "nnoremap <buffer> <C-Q> <C-^>
 endfunction
 
-function s:config_table_mappings()
+function! s:config_table_mappings()
   " dispatch for pear-tree compatibility
   inoremap <silent><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
   inoremap <silent><expr> <BS> <SID>in_table(getline('.')) ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
@@ -293,16 +293,120 @@ function! g:status_lights.flags_renderer()
   return flags->sort()->join(' ')
 endfunction
 
+" status lights filetype renderer
+function! g:status_lights.filetype_renderer()
+  return &filetype
+endfunction
+
+" status lights defaults
+let g:status_lights.default_lights = [
+      \ g:status_lights.filetype_renderer,
+      \ g:status_lights.flags_renderer,
+      \ g:status_lights.symbols_renderer,
+      \ ]
+
 function! s:pad(text)
   return len(a:text) > 0 ? a:text .. ' ' : ''
 endfunction
 
 " status lights combining renderer
-function! g:status_lights.flags_and_symbols_renderer()
+function! g:status_lights.big_renderer()
   let lights = ''
-  let lights ..= s:pad(g:status_lights.flags_renderer())
-  let lights ..= s:pad(g:status_lights.symbols_renderer())
+  let renderers = get(w:, "lights_renderers", g:status_lights.default_lights)
+  for Light_Renderer in renderers
+    let lights ..= s:pad(Light_Renderer())
+  endfor
   return lights
+endfunction
+
+" status lights customisation
+let g:status_lights.known_lights = ["filetype", "flags", "symbols"]
+
+" ConfigureLights(lights)
+" configure status lights for the current window
+"
+" lights should be a list of known names of lights, or a string containing
+" known names of lights separated by whitespace
+"
+" unknown names are ignored
+"
+" return 1 if any names were unknown for testing purposes, otherwise 0
+function! ConfigureLights(lights)
+  let lights = type(a:lights) == type('') ? split(a:lights) : a:lights
+  let lights_on = []
+  let renderers = []
+  for name in lights
+    if index(g:status_lights.known_lights, name) != -1
+      call add(lights_on, name)
+      call add(renderers, funcref("g:status_lights." .. name .. "_renderer", g:status_lights))
+    endif
+  endfor
+
+  let w:lights_on = lights_on
+  let w:lights_renderers = renderers
+  return len(renderers) != len(lights)
+endfunction
+
+" ResetLights()
+" reset status lights for the current window to the global default
+function! ResetLights()
+  unlet! w:lights_on w:lights_renderers
+endfunction
+
+" LightOn(light)
+" enable known light name in status lights for currrent window
+"
+" return 0 if light was enabled, otherwise 1
+function! LightOn(light)
+  if index(g:status_lights.known_lights, a:light) == -1
+    return 1
+  endif
+
+  if ! exists("w:lights_on")
+    let w:lights_on = copy(g:status_lights.known_lights)
+  endif
+
+  if index(w:lights_on, a:light) != -1
+    return 1
+  endif
+
+  call add(w:lights_on, a:light)
+  let w:lights_renderers = []
+  for name in w:lights_on
+    call add(w:lights_renderers, funcref("g:status_lights." .. name .. "_renderer", g:status_lights))
+  endfor
+  return 0
+endfunction
+
+" LightOff(light)
+" disable known light name in status lights for currrent window
+"
+" return 0 if light was disabled, otherwise 1
+function! LightOff(light)
+  if index(g:status_lights.known_lights, a:light) == -1
+    return 1
+  endif
+
+  if ! exists("w:lights_on")
+    let w:lights_on = copy(g:status_lights.known_lights)
+  endif
+
+  let index = index(w:lights_on, a:light)
+  if index == -1
+    return 1
+  endif
+
+  call remove(w:lights_on, index)
+  let w:lights_renderers = []
+  for name in w:lights_on
+    call add(w:lights_renderers, funcref("g:status_lights." .. name .. "_renderer", g:status_lights))
+  endfor
+  return 0
+endfunction
+
+" completion list helper function
+function! KnownLights(ArgLead, CmdLine, CursorPos)
+  return join(g:status_lights.known_lights, "\n")
 endfunction
 
 " use to define custom tablines for specific filetypes.
@@ -480,8 +584,7 @@ function! CustomStatusline()
   let statusline ..= s:highlight_if_modified('%f') .. ' '
   let statusline ..= '%{%g:statusline_fns.branch()%}'
   let statusline ..= '%='
-  let statusline ..= '%2*%{&filetype}%* '
-  let statusline ..= '%2*%{%g:status_lights.flags_and_symbols_renderer()%}%*'
+  let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
   let statusline ..= '%1* '
   let statusline ..= '%{%g:statusline_fns.wordcount()%}'
   let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
@@ -496,7 +599,7 @@ function! QuickfixStatusline()
   let statusline ..= "%*%<%t %{exists('w:quickfix_title') ? w:quickfix_title : ''}"
   let statusline ..= '%='
   let statusline ..= '%2*%{&filetype}%* '
-  let statusline ..= '%2*%{%g:status_lights.flags_and_symbols_renderer()%}%*'
+  let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
   let statusline ..= '%1* '
   let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
   return statusline
@@ -715,6 +818,39 @@ command! ReadMode
       \   setlocal scrolloff=999  |
       \ else                      |
       \   setlocal scrolloff<     |
+      \ endif
+
+" ConfigureLights
+"   configure status lights for the current window
+command! -complete=custom,KnownLights -nargs=1 ConfigureLights
+      \ if ConfigureLights('<args>')  |
+      \   echohl ErrorMsg             |
+      \   echomsg "Unknown lights"    |
+      \   echohl None                 |
+      \ endif
+
+" ResetLights
+"   reset status lights for the current window
+command! ResetLights
+      \ call ResetLights()              |
+      \ echo "Lights have been reset!"
+
+" LightOn
+"   turn light on in status lights for current window
+command! -complete=custom,KnownLights -nargs=1 LightOn
+      \ if LightOn('<args>')      |
+      \   echohl ErrorMsg         |
+      \   echomsg "Unknown light" |
+      \   echohl None             |
+      \ endif
+
+" LightOff
+"   turn light off in status lights for current window
+command! -complete=custom,KnownLights -nargs=1 LightOff
+      \ if LightOff('<args>')     |
+      \   echohl ErrorMsg         |
+      \   echomsg "Unknown light" |
+      \   echohl None             |
       \ endif
 
 " =================

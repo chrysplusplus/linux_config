@@ -272,12 +272,17 @@ function! g:status_lights.symbols_renderer()
   return lights
 endfunction
 
+" status lights read mode renderer
+function! g:status_lights.readmode_renderer()
+  return &scrolloff == 999 ? 'READ' : ''
+endfunction
+
 let g:status_lights.flags = {
       \ 'virtualedit': ['ve', {val -> val != ''}],
       \ 'colorcolumn': ['cc', {val -> val != ''}],
       \ 'textwidth':   ['tw', {val -> val != 0}],
       \ 'tabstop':     ['ts', {val -> val != 2}],
-      \ 'scrolloff':   ['so', {val -> val != 0}],
+      \ 'scrolloff':   ['so', {val -> val != 0 && val != 999}],
       \ }
 
 " status lights flags renderer
@@ -323,6 +328,7 @@ endfunction
 " status lights defaults
 let g:status_lights.default_lights = [
       \ g:status_lights.filetype_renderer,
+      \ g:status_lights.readmode_renderer,
       \ g:status_lights.flags_renderer,
       \ g:status_lights.symbols_renderer,
       \ g:status_lights.hlsearch_renderer,
@@ -343,7 +349,9 @@ function! g:status_lights.big_renderer()
 endfunction
 
 " status lights customisation
-let g:status_lights.known_lights = ["filetype", "flags", "symbols", "hlsearch"]
+let g:status_lights.known_lights = [
+      \ "filetype", "flags", "readmode", "symbols", "hlsearch"
+      \ ]
 
 " ConfigureLights(lights)
 " configure status lights for the current window
@@ -888,10 +896,10 @@ command! Scratch new +set\ bt=nofile
 " ReadMode
 "   toggle scrolloff setting for using j and k for easy reading
 command! ReadMode
-      \ if &scrolloff == 0        |
-      \   setlocal scrolloff=999  |
-      \ else                      |
+      \ if &scrolloff == 999      |
       \   setlocal scrolloff<     |
+      \ else                      |
+      \   setlocal scrolloff=999  |
       \ endif
 
 " ConfigureLights

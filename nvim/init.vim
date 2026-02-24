@@ -544,6 +544,17 @@ function! s:check_branch_state(bufnr)
 
   let branch_status = FugitiveExecute(["status", "--porcelain"], a:bufnr)
   let state_info.dirty = len(branch_status.stdout) > 1
+  let &ro = &ro
+endfunction
+
+function! s:check_tabs(bufnr)
+  let tab_matches = matchbufline(a:bufnr, '\t', 1, '$')
+  if len(tab_matches) == 0
+    call setbufvar(a:bufnr, "statusline_bad_tab", {})
+  else
+    call setbufvar(a:bufnr, "statusline_bad_tab", tab_matches[0])
+  endif
+  let &ro = &ro
 endfunction
 
 augroup chrys_statusline
@@ -560,6 +571,12 @@ augroup chrys_statusline
   autocmd BufEnter * call s:check_branch_state(bufnr())
   autocmd BufWritePost * call s:check_branch_state(bufnr())
 
+  " check for trailing spaces in buffer
+  autocmd CursorHold * call s:check_tabs(bufnr())
+  autocmd BufReadPost * call s:check_tabs(bufnr())
+  autocmd BufEnter * call s:check_tabs(bufnr())
+  autocmd BufWritePost * call s:check_tabs(bufnr())
+
   " filetypes for displaying wordcount
   autocmd FileType text,markdown,help,vimwiki let b:statusline_wordcount = 1
 augroup END
@@ -569,7 +586,7 @@ let g:statusline_fns = {}
 function! g:statusline_fns.trailing()
   let trailing_linenr = get(b:, "statusline_trailing_linenr", 0)
   if trailing_linenr
-    return '%5* ! ' .. trailing_linenr .. ' '
+    return '!\s$ ' .. trailing_linenr
   else
     return ''
   endif
@@ -600,6 +617,34 @@ function! g:statusline_fns.branch()
   endif
 endfunction
 
+function! g:statusline_fns.bad_tabs()
+  if &filetype == 'help'
+    return ''
+  elseif ! get(b:, "do_warn_tabs", get(g:, "do_warn_tabs", 1))
+    return ''
+  elseif ! exists("b:statusline_bad_tab")
+    return ''
+  elseif empty(b:statusline_bad_tab)
+    return ''
+  else
+    let lnum = b:statusline_bad_tab.lnum
+    return '!\t ' .. lnum
+  endif
+endfunction
+
+function! s:pad_warning_highlight(text)
+  return len(a:text) > 0 ? '%5* ' .. a:text .. ' %*' : ''
+endfunction
+
+function! g:statusline_fns.warnings()
+  let warnings = []
+  call add(warnings, g:statusline_fns.trailing())
+  call add(warnings, g:statusline_fns.bad_tabs())
+
+  let result = join(filter(warnings, "len(v:val) > 0"))
+  return s:pad_warning_highlight(result)
+endfunction
+
 " CustomStatusline
 function! CustomStatusline()
   let statusline = ' '
@@ -610,8 +655,8 @@ function! CustomStatusline()
   let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
   let statusline ..= '%1* '
   let statusline ..= '%{%g:statusline_fns.wordcount()%}'
-  let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
-  let statusline ..= '%{%g:statusline_fns.trailing()%}'
+  let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% %*'
+  let statusline ..= '%{%g:statusline_fns.warnings()%}'
   return statusline
 endfunction
 

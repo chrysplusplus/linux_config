@@ -298,11 +298,34 @@ function! g:status_lights.filetype_renderer()
   return &filetype
 endfunction
 
+" status lights hlsearch renderer
+function! g:status_lights.hlsearch_renderer()
+  if ! &hlsearch
+    return ''
+  endif
+
+  let matches = matchbufline(bufnr(), @/, 1, '$')
+  let [_, lnum, byte, _] = getpos('.')
+  let counter = 0
+  for match in matches
+    if lnum < match.lnum
+      break
+    elseif lnum == match.lnum && byte < match.byteidx
+      break
+    else
+      let counter += 1
+    endif
+  endfor
+
+  return printf('/%s/[%d/%d]', @/, counter, len(matches))
+endfunction
+
 " status lights defaults
 let g:status_lights.default_lights = [
       \ g:status_lights.filetype_renderer,
       \ g:status_lights.flags_renderer,
       \ g:status_lights.symbols_renderer,
+      \ g:status_lights.hlsearch_renderer,
       \ ]
 
 function! s:pad(text)
@@ -320,7 +343,7 @@ function! g:status_lights.big_renderer()
 endfunction
 
 " status lights customisation
-let g:status_lights.known_lights = ["filetype", "flags", "symbols"]
+let g:status_lights.known_lights = ["filetype", "flags", "symbols", "hlsearch"]
 
 " ConfigureLights(lights)
 " configure status lights for the current window

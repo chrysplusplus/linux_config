@@ -12,3 +12,4 @@ nvim/*
 !mpv/mpv.conf
 !tmux
 !tmux/tmux.conf
+!tmux/status.sh

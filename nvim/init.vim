@@ -861,12 +861,6 @@ function! Pprint_number(num)
   return join(reverse(result), g:thousands_sep)
 endfunction
 
-function! s:nxsync()
-  let password = inputsecret('Enter Nextcloud password: ')
-  redraw
-  echo system(printf('~/scripts/nxsync.sh "%s"', password))
-endfunction
-
 " ========
 " Commands
 " ========
@@ -934,10 +928,6 @@ command! -complete=custom,KnownLights -nargs=1 LightOff
       \   echomsg "Unknown light" |
       \   echohl None             |
       \ endif
-
-" Nxsync
-"   perform sync with nextcloudcmd
-command! Nxsync call <SID>nxsync()
 
 " =================
 " Vim Configuration

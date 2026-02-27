@@ -306,19 +306,19 @@ endfunction
 function! s:imap_space() "-> mapping
   " key mapping evaluator for Space
   if ! exists("b:table_wrap_colnr")
-    return "\<Space>"
+    return "\<C-]>\<Space>"
   endif
 
   let [linenr, colnr] = s:cursor_pos()
   let in_table = s:matches(getline(linenr), s:table_pattern)
   if in_table && colnr >= b:table_wrap_colnr
     let b:table_working = 1
-    return "\<Esc>\<Plug>(TableSplitLine)i"
+    return "\<C-]>\<Esc>\<Plug>(TableSplitLine)i"
   elseif in_table
-    return "\<Space>"
+    return "\<C-]>\<Space>"
   else
     unlet b:table_wrap_colnr
-    return "\<Space>"
+    return "\<C-]>\<Space>"
   endif
 endfunction
 
@@ -506,8 +506,7 @@ function! s:plug_split_line()
   let column_width = s:cols_on_line(header)[col_idx]
   let format_string = ' %-' .. column_width .. 'S '
 
-  let byte = byteidx(current_line, colnr - 1)
-  let [before_text, after_text] = s:split_col_text(current_line, byte)
+  let [before_text, after_text] = s:split_col_text(linenr, colnr)
   let before_text = printf(format_string, trim(before_text))
   let after_text = printf(format_string, trim(after_text))
 
@@ -1344,10 +1343,10 @@ function! s:resize_table_at_cursor(...)
   call s:format_table_at_cursor()
 endfunction
 
-function! s:split_col_text(line, byte) "-> [String, String]
-  " return the column text containing the byte index, split at that index
-  let before = split(a:line[:a:byte], '|')[-1]
-  let after = split(a:line[a:byte + 1:], '|')[0]
+function! s:split_col_text(linenr, colnr) "-> [String, String]
+  " return the text from the specified line split at the specified column
+  let before = split(slice(getline(a:linenr), 0, a:colnr), '|')[-1]
+  let after = split(slice(getline(a:linenr), a:colnr), '|')[0]
   return [before, after]
 endfunction
 

@@ -663,7 +663,7 @@ function! CustomStatusline()
   let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
   let statusline ..= '%1* '
   let statusline ..= '%{%g:statusline_fns.wordcount()%}'
-  let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% %*'
+  let statusline ..= 'L %3*%l%1*/%L C %3*%v%1* %p%% %*'
   let statusline ..= '%{%g:statusline_fns.warnings()%}'
   return statusline
 endfunction

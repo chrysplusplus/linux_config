@@ -929,6 +929,16 @@ command! -complete=custom,KnownLights -nargs=1 LightOff
       \   echohl None             |
       \ endif
 
+" HideTabline
+"   command to hide the tabline, When [!] is specified, it restores the
+"   tabline. Note that entering and leaving Goyo mode resets this
+command! -bang HideTabline
+      \ if empty(<q-bang>)  |
+      \   set showtabline=0 |
+      \ else                |
+      \   set showtabline=3 |
+      \ endif
+
 " =================
 " Vim Configuration
 " =================

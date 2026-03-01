@@ -196,10 +196,7 @@ function! s:config_misc_mappings()
   tmap <C-[> <C-\><C-N>
 
   " Q to format paragraph without jumping
-  nnoremap Q m'gqap`'
-
-  " J to join lines without jumping (sets last mark)
-  nnoremap J m'J`'
+  nnoremap Q gwap
 endfunction
 
 " global mappings

@@ -251,7 +251,6 @@ let g:status_lights = {}
 let g:status_lights.symbols = {
       \ 'cursorline': '=',
       \ 'digraph':    '~',
-      \ 'hlsearch':   'φ',
       \ 'linebreak':  ']',
       \ 'list':       '¶',
       \ 'spell':      '¤',

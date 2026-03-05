@@ -125,6 +125,8 @@ function! s:config_windowing_mappings()
   " Alt + key bindings
   nnoremap <M-q> <C-W>q
   nnoremap <M-w> <C-W>w
+  nnoremap <M-r> <C-W>r
+  nnoremap <M-t> <C-W>t
   nnoremap <M-o> <C-W>o
   nnoremap <M-p> <C-W>p
   nnoremap <M-s> <C-W>s
@@ -140,7 +142,9 @@ function! s:config_windowing_mappings()
   nnoremap <Leader><M-k> <C-W>k
   nnoremap <Leader><M-l> <C-W>l
 
+  nnoremap <M-x> <C-W>x
   nnoremap <M-v> <C-W>v
+  nnoremap <M-b> <C-W>b
 
   nnoremap <M-S-h> <C-W>H
   nnoremap <M-S-j> <C-W>J

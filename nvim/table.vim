@@ -1607,3 +1607,13 @@ function! TableExposeFunction(function_name) "-> funcref
   return Funcref
 endfunction
 
+" TableIsCursorInTable()
+"   return non-zero if cursor is located in a table
+"
+"   useful for creating mappings that do different things inside a table and
+"   outside the table, or if a mapping in this script conflicts with another
+"   plugin
+function! TableIsCursorInTable()
+  return s:matches(getline('.'), s:table_pattern)
+endfunction
+

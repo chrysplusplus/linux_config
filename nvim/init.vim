@@ -6,15 +6,10 @@ source ~/.config/nvim/table.vim
 " ====================
 " table.vim Extensions
 " ====================
-let s:table_pattern = TableExposeVariable("table_pattern")
 let s:_table_imap_return = TableExposeFunction("imap_return")
 let s:_table_imap_backspace = TableExposeFunction("imap_backspace")
 let s:_table_nmap_o = TableExposeFunction("nmap_o")
 let s:_table_nmap_O = TableExposeFunction("nmap_O")
-
-function! s:in_table(text)
-  return match(a:text, s:table_pattern) == 0
-endfunction
 
 function! s:table_imap_return()
   return s:_table_imap_return()
@@ -59,11 +54,11 @@ function! s:config_vimwiki_mappings()
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
   " dispatch return key to table.vim and vimwiki
-  inoremap <buffer><expr><silent> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
+  inoremap <buffer><expr><silent> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
   " dispatch o to table.vim and vimwiki
-  nmap <buffer><expr> o <SID>in_table(getline('.')) ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
+  nmap <buffer><expr> o TableIsCursorInTable() ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
   " dispatch O to table.vim and vimwiki
-  nmap <buffer><expr> O <SID>in_table(getline('.')) ? <SID>table_nmap_O() : '<Plug>VimwikiListO'
+  nmap <buffer><expr> O TableIsCursorInTable() ? <SID>table_nmap_O() : '<Plug>VimwikiListO'
 endfunction
 
 function! s:config_cpp_mappings()
@@ -83,8 +78,8 @@ endfunction
 
 function! s:config_table_mappings()
   " dispatch for pear-tree compatibility
-  inoremap <silent><expr> <CR> <SID>in_table(getline('.')) ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
-  inoremap <silent><expr> <BS> <SID>in_table(getline('.')) ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
+  inoremap <silent><expr> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
+  inoremap <silent><expr> <BS> TableIsCursorInTable() ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
 endfunction
 
 function! s:config_telescope_mappings()
@@ -112,15 +107,9 @@ function! s:config_leader_mappings()
   " \s to toggle spell check
   nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
   " \h to toggle highlighted search
-  "   with table dispatch
-  nmap <silent><expr> <Leader>h <SID>in_table(getline('.')) ? '<Plug>(TableLeftCell)' : '<CMD>set hlsearch!<cr>'
-  " \j to goto the below paragraph-cell
-  nmap <silent><expr> <Leader>j <SID>in_table(getline('.')) ? '<Plug>(TableDownCell)' : 'j'
-  " \k to goto the above paragraph-cell
-  nmap <silent><expr> <Leader>k <SID>in_table(getline('.')) ? '<Plug>(TableUpCell)' : 'k'
+  nmap <silent> <Leader>h <CMD>set hlsearch!<CR>
   " \l to toggle colour line
-  "   with table dispatch
-  nmap <silent><expr> <Leader>l <SID>in_table(getline('.')) ? '<Plug>(TableRightCell)' : '<CMD>setl cul!<CR>'
+  nmap <silent> <Leader>l <CMD>setl cul!<CR>
   " \L to toggle visible whitespace
   nnoremap <silent> <Leader>L <CMD>setl list!<CR>
   " \z to toggle goyo mode
@@ -139,11 +128,20 @@ function! s:config_windowing_mappings()
   nnoremap <M-o> <C-W>o
   nnoremap <M-p> <C-W>p
   nnoremap <M-s> <C-W>s
-  nnoremap <M-h> <C-W>h
-  nnoremap <M-j> <C-W>j
-  nnoremap <M-k> <C-W>k
-  nnoremap <M-l> <C-W>l
+
+  " these four double as table navigation so I also use the leader key to
+  " 'escape' the table context
+  nnoremap <expr> <M-h> TableIsCursorInTable() ? '<Plug>(TableLeftCell)'  : '<C-W>h'
+  nnoremap <expr> <M-j> TableIsCursorInTable() ? '<Plug>(TableDownCell)'  : '<C-W>j'
+  nnoremap <expr> <M-k> TableIsCursorInTable() ? '<Plug>(TableUpCell)'    : '<C-W>k'
+  nnoremap <expr> <M-l> TableIsCursorInTable() ? '<Plug>(TableRightCell)' : '<C-W>l'
+  nnoremap <Leader><M-h> <C-W>h
+  nnoremap <Leader><M-j> <C-W>j
+  nnoremap <Leader><M-k> <C-W>k
+  nnoremap <Leader><M-l> <C-W>l
+
   nnoremap <M-v> <C-W>v
+
   nnoremap <M-S-h> <C-W>H
   nnoremap <M-S-j> <C-W>J
   nnoremap <M-S-k> <C-W>K

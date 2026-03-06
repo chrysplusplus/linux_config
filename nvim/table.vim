@@ -1382,13 +1382,44 @@ function! s:create_table_formatter(cur_linenr, cur_colnr) "-> Dictionary
         \ 'collect_row': function("<SID>formatter_collect_row"),
         \ 'wrap_column': function("<SID>formatter_wrap_column"),
         \ 'remove_column_trailing_empty_lines': function("<SID>remove_column_trailing_empty_lines"),
-        \ 'format_rows': function("<SID>formatter_format_rows")
+        \ 'format_rows': function("<SID>formatter_format_rows"),
+        \ 'row_range': function("<SID>formatter_row_range"),
+        \ 'wrap_lines_to_width': function("<SID>formatter_wrap_lines_to_width")
         \}
 
   return formatter
 endfunction
 
-function s:formatter_collect_row(this_sep, next_sep) dict "-> List[List[String]]
+function! s:create_bare_table_formatter(column_widths) "-> Dictionary
+  " return dictionary representing a formatter object to format a table to the
+  " specified column widths
+  "
+  " does not fully implement formatter objects and is intended for building a
+  " table from a data structure rather than parsing one from a text buffer
+  return {
+        \ 'cols': a:column_widths,
+        \ 'wrap_lines_to_width': function("<SID>formatter_wrap_lines_to_width"),
+        \ 'wrap_column': function("<SID>formatter_wrap_column"),
+        \ 'format_rows': function("<SID>formatter_format_rows")
+        \ }
+endfunction
+
+function! s:formatter_row_range() dict " -> List[[Number, Number]]
+  " return a ranged-list of elements for the start and end separator line
+  " numbers for each in the formatter's table
+  let elems = []
+  let prev_sep = self.first_sep
+  let this_sep = s:find_next_sep(prev_sep)
+  call add(elems, [prev_sep, this_sep])
+  while this_sep != self.last_sep
+    let prev_sep = this_sep
+    let this_sep = s:find_next_sep(prev_sep)
+    call add(elems, [prev_sep, this_sep])
+  endwhile
+  return elems
+endfunction
+
+function! s:formatter_collect_row(this_sep, next_sep) dict "-> List[List[String]]
   let max_col_idx = s:max_col_idx_from_line(getline(self.first_sep))
 
   let row = []
@@ -1431,26 +1462,28 @@ function s:formatter_collect_row(this_sep, next_sep) dict "-> List[List[String]]
   return row
 endfunction
 
-function! s:formatter_wrap_column(column, col_idx) dict "-> List[String]
-  let column_width = self.cols[a:col_idx]
-  let lines = []
-
-  for paragraph in a:column
+function! s:formatter_wrap_lines_to_width(lines, width) " -> List[String]
+  let result = []
+  for paragraph in a:lines
     let line_buffer = ''
     for word in split(paragraph, ' ')
       if empty(line_buffer)
         let line_buffer = word
-      elseif strcharlen(line_buffer) + strcharlen(word) + 1 <= column_width
+      elseif strcharlen(line_buffer) + strcharlen(word) + 1 <= a:width
         let line_buffer ..= ' ' .. word
       else
-        call add(lines, line_buffer)
+        call add(result, line_buffer)
         let line_buffer = word
       endif
     endfor
-    call add(lines, line_buffer)
+    call add(result, line_buffer)
   endfor
+  return result
+endfunction
 
-  return lines
+function! s:formatter_wrap_column(column, col_idx) dict "-> List[String]
+  let column_width = self.cols[a:col_idx]
+  return self.wrap_lines_to_width(a:column, column_width)
 endfunction
 
 function! s:formatter_format_rows(rows) dict "-> List[String]
@@ -1487,6 +1520,292 @@ function! s:formatter_format_rows(rows) dict "-> List[String]
   endfor
 
   return lines
+endfunction
+
+" ===================
+" Converter Functions
+" ===================
+
+function! s:table_at_cursor_to_plaintext()
+  " converts the table at the cursor to its plaintext equivalent
+  let [linenr, colnr] = s:cursor_pos()
+  let formatter = s:create_table_formatter(linenr, colnr)
+  if empty(formatter)
+    return
+  endif
+
+  let table = []
+  for sep_pair in formatter.row_range()
+    let [this_sep, next_sep] = sep_pair
+    let row = formatter.collect_row(this_sep, next_sep)
+    call map(row, "formatter.remove_column_trailing_empty_lines(v:val)")
+    call map(row, "formatter.wrap_lines_to_width(v:val, &tw)")
+    call add(table, row)
+  endfor
+
+  if empty(table)
+    return
+  endif
+
+  let table_headers = []
+  for cell in table[0]
+    if len(cell) != 1
+      let table_headers = []
+      break
+    else
+      call add(table_headers, cell[0])
+    endif
+  endfor
+
+  let before_fmt = get(b:, "table_plain_before", "")
+  let after_fmt = get(b:, "table_plain_after", "")
+
+  let lines = []
+
+  if stridx(before_fmt, "\n") != -1
+    let begin_cmd = printf("!TBEGIN %s", join(formatter.cols))
+    call extend(lines, split(before_fmt, "\n"))
+    call extend(lines, [begin_cmd, ""])
+  else
+    let begin_cmd = printf("%s!TBEGIN %s", before_fmt, join(formatter.cols))
+    call extend(lines, [begin_cmd, ""])
+  endif
+
+  for row_i in range(len(table))
+    let row = table[row_i]
+    if ! empty(table_headers) && row_i == 0
+      continue
+    endif
+
+    let row_cmd = printf("!TROW %d", row_i)
+    call extend(lines, [row_cmd, ""])
+    for cell_i in range(len(row))
+      let cell = row[cell_i]
+      let cell_cmd = empty(table_headers) ? "!TCELL" : "!TCELL " .. table_headers[cell_i]
+      call extend(lines, [cell_cmd, ""])
+      call extend(lines, cell)
+      call add(lines, "")
+    endfor
+  endfor
+
+  if stridx(after_fmt, "\n") != -1
+    call add(lines, "!TEND")
+    call extend(lines, split(after_fmt, "\n"))
+  else
+    let end_cmd = printf("!TEND%s", after_fmt)
+    call add(lines, end_cmd)
+  endif
+
+  call deletebufline(bufnr(), formatter.first_sep, formatter.last_sep)
+  call append(formatter.first_sep - 1, lines)
+  call setcursorcharpos(formatter.first_sep, 0)
+endfunction
+
+function! s:plaintext_at_cursor_to_table()
+  " converts the plaintext at the cursor to its table equivalent
+  let before_fmt_str = get(b:, "table_plain_before", "")
+  if stridx(before_fmt_str, "\n") != -1
+    let before_fmt = split(before_fmt_str, "\n")
+  else
+    let before_fmt = [before_fmt_str]
+  endif
+
+  let after_fmt_str = get(b:, "table_plain_after", "")
+  if stridx(after_fmt_str, "\n") != -1
+    let after_fmt = split(after_fmt_str, "\n")
+  else
+    let after_fmt = [after_fmt_str]
+  endif
+
+  let table_start = search("!TBEGIN", 'bn')
+  let table_end = search("!TEND", 'n')
+  if table_start == 0 || table_end == 0
+    return
+  elseif table_start >= table_end
+    return
+  endif
+
+  let region_start = table_start
+  while region_start - 1 > 0
+    let prev_line = getline(region_start - 1)
+    let match_found = 0
+    for line in before_fmt
+      if prev_line == line
+        let region_start -= 1
+        let match_found = 1
+        break
+      endif
+    endfor
+
+    if ! match_found
+      break
+    endif
+  endwhile
+
+  let region_end = table_end
+  while region_end + 1 <= line('$')
+    let next_line = getline(region_end + 1)
+    let match_found = 0
+    for line in after_fmt
+      if next_line == line
+        let region_end += 1
+        let match_found = 1
+        break
+      endif
+    endfor
+
+    if ! match_found
+      break
+    endif
+  endwhile
+
+  " parsing states
+  let stbegin        = 0  " !TBEGIN -> stwidth
+  let stwidth        = 1  " \n -> strowfirst
+  let strowfirst     = 2  " !TROW -> strownumfirst
+  let strownumfirst  = 3  " >0 -> strcellfirst ; -> strcell
+  let stcellfirst    = 4  " !TCELL -> strcellhdrfirst
+  let stcellhdrfirst = 5  " \n -> strcelltxtfirst
+  let stcelltxtfirst = 6  " ^!TCELL -> stcellfirst ; ^!TROW -> strow ; ^!TEND -> stdone
+  let strow          = 7  " !TROW -> strownum
+  let strownum       = 8  " -> strcell
+  let stcell         = 9  " !TCELL -> strhdr
+  let stcellhdr      = 10 " \n -> stcelltxt
+  let stcelltxt      = 11 " ^!TCELL -> stcell ; ^!TROW -> strow ; ^!TEND -> stdone
+  let stdone         = 12
+
+  let column_widths = []
+  let table = []
+  let word_buf = []
+
+  let state = stbegin
+  for linenr in range(table_start, table_end)
+    let line = getline(linenr)
+    let split_line = split(line)
+    let first_word = empty(line) ? '' : split_line[0]
+
+    if state == stwidth && empty(line)
+      let state = strowfirst
+
+    elseif state == stcellhdrfirst && empty(line)
+      call add(table[0], [join(word_buf, ' ')])
+      let state = stcelltxtfirst
+      let word_buf = []
+
+    elseif state == stcelltxtfirst && first_word == "!TCELL"
+      let state = stcellfirst
+
+    elseif state == stcelltxtfirst && first_word == "!TROW"
+      let state = strow
+
+    elseif state == stcelltxtfirst && first_word == "!TEND"
+      let state = stdone
+      break
+
+    elseif state == stcelltxtfirst
+      call add(table[-1][-1], line)
+      continue
+
+    elseif state == stcellhdr && empty(line)
+      let state = stcelltxt
+
+    elseif state == stcelltxt && first_word == "!TCELL"
+      let state = stcell
+
+    elseif state == stcelltxt && first_word == "!TROW"
+      let state = strow
+
+    elseif state == stcelltxt && first_word == "!TEND"
+      let state = stdone
+      break
+
+    elseif state == stcelltxt
+      call add(table[-1][-1], line)
+      continue
+    endif
+
+    for word in split_line
+      let as_num = str2nr(word)
+      if state == stbegin && word == "!TBEGIN"
+        let state = stwidth
+
+      elseif state == stwidth
+        let min_width = s:min_column_width
+        call add(column_widths, as_num > min_width ? as_num : min_width)
+
+      elseif state == strowfirst && word == "!TROW"
+        let state = strownumfirst
+
+      elseif state == strownumfirst && as_num > 0
+        let state = stcellfirst
+        call add(table, [])
+        call add(table, [])
+
+      elseif state == strownumfirst
+        let state = stcell
+        call add(table, [])
+
+      elseif state == stcellfirst && word == "!TCELL"
+        let state = stcellhdrfirst
+        let word_buf = []
+        call add(table[-1], [])
+
+      elseif state == stcellhdrfirst
+        call add(word_buf, word)
+
+      elseif state == strow && word == "!TROW"
+        let state = strownum
+
+      elseif state == strownum
+        let state = stcell
+        call add(table, [])
+
+      elseif state == stcell && word == "!TCELL"
+        let state = stcellhdr
+        call add(table[-1], [])
+      endif
+    endfor
+  endfor
+
+  if state != stdone
+    return
+  endif
+
+  for row in table
+    for col_i in range(len(row))
+      let cell = row[col_i]
+      let paragraphs = []
+      let len_cell = len(cell)
+      for line_i in range(len_cell)
+        let line = cell[line_i]
+        if empty(line) && empty(paragraphs)
+          continue
+        elseif empty(line) && line_i + 1 == len_cell
+        elseif empty(line)
+          call add(paragraphs, '')
+        elseif empty(paragraphs)
+          call add(paragraphs, line)
+        elseif empty(paragraphs[-1])
+          call add(paragraphs, line)
+        else
+          let paragraphs[-1] ..= ' ' .. line
+        endif
+      endfor
+
+      let row[col_i] = paragraphs
+    endfor
+  endfor
+
+  let formatter = s:create_bare_table_formatter(column_widths)
+
+  for row in table
+    call map(row, "formatter.wrap_column(v:val, v:key)")
+  endfor
+
+  let lines = formatter.format_rows(table)
+  call deletebufline(bufnr(), region_start, region_end)
+  call append(region_start - 1, lines)
+  call setcursorcharpos(region_start, 0)
 endfunction
 
 " ============
@@ -1579,6 +1898,8 @@ command! FormatTable call <SID>format_table_at_cursor()
 command! -nargs=? ResizeTableColumn call <SID>resize_table_at_cursor(<args>)
 command! InsertRow call <SID>insert_row_at_cursor()
 command! -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
+command! TableToPlain call <SID>table_at_cursor_to_plaintext()
+command! PlainToTable call <SID>plaintext_at_cursor_to_table()
 
 " ==========
 " Extensions

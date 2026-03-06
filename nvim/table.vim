@@ -163,6 +163,23 @@
 " insert mode at the end of the cell text.
 "
 " Defaults to 0
+"
+" Customisation Variable: b:table_plain_before, b:table_plain_after
+"
+" When set for a particular buffer, these strings are used to wrap the
+" plaintext representation of a table when the TableToPlain and PlainToTable
+" commands are used.
+"
+" A particularly useful example might be for markdown, where it is helpful to
+" wrap a plaintext table in a code block, so use "```\n" and "\n```" for
+" before and after respectively.
+"
+" Note: these lines are checked by PlainToTable and removed from the buffer if
+" found. The motivation here is for these commands to act as the reverse of
+" each other, so there should be no change to the buffer if you TableToPlain
+" and then PlainToTable.
+"
+" Defaults to ""
 
 " ================
 " Script Constants

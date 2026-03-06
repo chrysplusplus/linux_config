@@ -1855,6 +1855,76 @@ function! s:plaintext_at_cursor_to_table()
   call setcursorcharpos(region_start, 0)
 endfunction
 
+function! s:fancy_table_at_cursor()
+  " converts table at cursor to a fancy table
+  let [cur_linenr, cur_colnr] = s:cursor_pos()
+  let formatter = s:create_table_formatter(cur_linenr, cur_colnr)
+  if empty(formatter)
+    return
+  endif
+
+  for linenr in range(formatter.first_sep, formatter.last_sep)
+    let line = getline(linenr)
+    if linenr == formatter.first_sep
+      execute string(linenr)..'s/^|/┌/'
+      execute string(linenr)..'s/|$/┐/'
+      execute string(linenr)..'s/|/┬/g'
+      execute string(linenr)..'s/-/─/g'
+    elseif linenr == formatter.last_sep
+      execute string(linenr)..'s/^|/└/'
+      execute string(linenr)..'s/|$/┘/'
+      execute string(linenr)..'s/|/┴/g'
+      execute string(linenr)..'s/-/─/g'
+    elseif s:matches(line, s:table_sep_pattern)
+      execute string(linenr)..'s/^|/├/'
+      execute string(linenr)..'s/|$/┤/'
+      execute string(linenr)..'s/|/┼/g'
+      execute string(linenr)..'s/-/─/g'
+    else
+      execute string(linenr)..'s/|/│/g'
+    endif
+  endfor
+
+  call setcursorcharpos(cur_linenr, cur_colnr)
+endfunction
+
+function! s:unfancy_table_at_cursor()
+  " converts a fancy table back to a regular table
+  let [cur_linenr, cur_colnr] = s:cursor_pos()
+
+  let table_start = search('^┌[─┬]\+┐$', 'bn')
+  let table_end   = search('^└[─┴]\+┘$', 'n')
+  if table_start == 0 || table_end == 0
+    return
+  elseif table_start >= table_end
+    return
+  endif
+
+  for linenr in range(table_start, table_end)
+    let line = getline(linenr)
+    if linenr == table_start
+      execute string(linenr)..'s/┌/|/'
+      execute string(linenr)..'s/┐/|/'
+      execute string(linenr)..'s/┬/|/g'
+      execute string(linenr)..'s/─/-/g'
+    elseif linenr == table_end
+      execute string(linenr)..'s/└/|/'
+      execute string(linenr)..'s/┘/|/'
+      execute string(linenr)..'s/┴/|/g'
+      execute string(linenr)..'s/─/-/g'
+    elseif s:matches(line, '^├[─┼]\+┤$')
+      execute string(linenr)..'s/├/|/'
+      execute string(linenr)..'s/┤/|/'
+      execute string(linenr)..'s/┼/|/g'
+      execute string(linenr)..'s/─/-/g'
+    else
+      execute string(linenr)..'s/│/|/g'
+    endif
+  endfor
+
+  call setcursorcharpos(cur_linenr, cur_colnr)
+endfunction
+
 " ============
 " Autocommands
 " ============
@@ -1947,6 +2017,12 @@ command! InsertRow call <SID>insert_row_at_cursor()
 command! -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
 command! TableToPlain call <SID>table_at_cursor_to_plaintext()
 command! PlainToTable call <SID>plaintext_at_cursor_to_table()
+command! -bang FancyTable
+      \ if empty(<q-bang>)                    |
+      \   call <SID>fancy_table_at_cursor()   |
+      \ else                                  |
+      \   call <SID>unfancy_table_at_cursor() |
+      \ endif
 
 " ==========
 " Extensions

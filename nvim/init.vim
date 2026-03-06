@@ -1007,6 +1007,10 @@ augroup chrys_ft_markdown
 
   " set conceallevel for markdown
   autocmd FileType markdown setlocal conceallevel=2
+
+  " set table->plaintext decorators
+  autocmd FileType markdown let b:table_plain_before = "```\n"
+  autocmd FileType markdown let b:table_plain_after = "\n```"
 augroup END
 
 " quickfix-specific
@@ -1080,6 +1084,10 @@ augroup chrys_ft_vimwiki
   " fix conflicts with other plugins
   autocmd FileType vimwiki let b:coc_suggest_disable = 1
   autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
+
+  " set table->plaintext decorators
+  autocmd FileType vimwiki let b:table_plain_before = "```\n"
+  autocmd FileType vimwiki let b:table_plain_after = "\n```"
 augroup END
 
 let personal_wiki = {}

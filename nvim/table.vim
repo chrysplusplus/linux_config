@@ -1618,8 +1618,13 @@ function! s:table_at_cursor_to_plaintext()
   call setcursorcharpos(formatter.first_sep, 0)
 endfunction
 
-function! s:plaintext_at_cursor_to_table()
-  " converts the plaintext at the cursor to its table equivalent
+function! s:plaintext_range_at_cursor() " -> [Number, Number, Number, Number]
+  " return the range of a plaintext table around the cursor in the following
+  " form:
+  "
+  " [region_start, table_start, table_end, region_end]
+  "
+  " return empty list if region is invalid
   let before_fmt_str = get(b:, "table_plain_before", "")
   if stridx(before_fmt_str, "\n") != -1
     let before_fmt = split(before_fmt_str, "\n")
@@ -1637,9 +1642,9 @@ function! s:plaintext_at_cursor_to_table()
   let table_start = search("!TBEGIN", 'bn')
   let table_end = search("!TEND", 'n')
   if table_start == 0 || table_end == 0
-    return
+    return []
   elseif table_start >= table_end
-    return
+    return []
   endif
 
   let region_start = table_start
@@ -1676,7 +1681,16 @@ function! s:plaintext_at_cursor_to_table()
     endif
   endwhile
 
-  " parsing states
+  return [region_start, table_start, table_end, region_end]
+endfunction
+
+function! s:parse_plaintext_region(table_start, table_end) " -> Dictionary
+  " return table data structure parsed from plaintext lines
+  "
+  " Dictionary has keys:
+  "   column_widths List[Number, ...]
+  "   table         [...]
+
   let stbegin        = 0  " !TBEGIN -> stwidth
   let stwidth        = 1  " \n -> strowfirst
   let strowfirst     = 2  " !TROW -> strownumfirst
@@ -1696,7 +1710,7 @@ function! s:plaintext_at_cursor_to_table()
   let word_buf = []
 
   let state = stbegin
-  for linenr in range(table_start, table_end)
+  for linenr in range(a:table_start, a:table_end)
     let line = getline(linenr)
     let split_line = split(line)
     let first_word = empty(line) ? '' : split_line[0]
@@ -1785,7 +1799,7 @@ function! s:plaintext_at_cursor_to_table()
   endfor
 
   if state != stdone
-    return
+    return {}
   endif
 
   for row in table
@@ -1813,13 +1827,29 @@ function! s:plaintext_at_cursor_to_table()
     endfor
   endfor
 
-  let formatter = s:create_bare_table_formatter(column_widths)
+  return {'column_widths': column_widths, 'table': table}
+endfunction
 
-  for row in table
+function! s:plaintext_at_cursor_to_table()
+  " converts the plaintext at the cursor to its table equivalent
+  " parsing states
+  let range = s:plaintext_range_at_cursor()
+  if empty(range)
+    return
+  endif
+
+  let [region_start, table_start, table_end, region_end] = range
+  let parsed = s:parse_plaintext_region(table_start, table_end)
+  if empty(parsed)
+    return
+  endif
+
+  let formatter = s:create_bare_table_formatter(parsed.column_widths)
+  for row in parsed.table
     call map(row, "formatter.wrap_column(v:val, v:key)")
   endfor
 
-  let lines = formatter.format_rows(table)
+  let lines = formatter.format_rows(parsed.table)
   call deletebufline(bufnr(), region_start, region_end)
   call append(region_start - 1, lines)
   call setcursorcharpos(region_start, 0)

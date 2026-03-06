@@ -199,6 +199,9 @@ function! s:config_misc_mappings()
 
   " Q to format paragraph without jumping
   nnoremap Q gwap
+
+  " gy to g<Tab>
+  nnoremap gy g<Tab>
 endfunction
 
 " global mappings

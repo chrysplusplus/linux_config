@@ -886,6 +886,20 @@ function! Pprint_number(num)
   return join(reverse(result), g:thousands_sep)
 endfunction
 
+function! s:define_word(word) abort
+  if match(a:word, '[A-Za-z]\+') == -1
+    echoerr printf("Cannot define '%s'", a:word)
+    return
+  endif
+
+  let curl_cmd = "!curl dict.org/d:" .. a:word
+  new +set\ bt=nofile
+  execute "read" curl_cmd
+  silent %s/\r//
+  silent 1,/^151/-1d _
+  silent /^250/,$d _
+endfunction
+
 " ========
 " Commands
 " ========
@@ -963,6 +977,10 @@ command! -bang HideTabline
       \ else                |
       \   set showtabline=3 |
       \ endif
+
+" Define
+"   define word with online dictionary
+command! -nargs=1 Define call <SID>define_word('<args>')
 
 " =================
 " Vim Configuration

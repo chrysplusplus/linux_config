@@ -246,9 +246,33 @@ function! g:tabline_defaults.directory_detail()
   return '%1* %{fnamemodify(getcwd(), '':t'')} %*'
 endfunction
 
+function! DirectoryButton(minwid, nclicks, button, mods)
+  top vnew .
+endfunction
+
+" current directory button
+function! g:tabline_defaults.directory_button()
+  return '%@DirectoryButton@%1* %{fnamemodify(getcwd(), '':t'')} %*%X'
+endfunction
+
 " tab pages renderer
 function! g:tabline_defaults.tab_page_detail()
   return tabpagenr('$') > 1 ? '%1* %{tabpagenr()} / %{tabpagenr(''$'')} %*' : ''
+endfunction
+
+" tab pages buttons renderer
+function! g:tabline_defaults.tab_page_buttons()
+  let inactive_tab = "%%7*%%%dT %d %%T%%*"
+  let active_tab = "%%1* %d %%*"
+  let active_tabpagenr = tabpagenr()
+  let max_tabpagenr = tabpagenr('$')
+  if max_tabpagenr == 1
+    return ''
+  endif
+
+  let tab_pages = map(range(1, max_tabpagenr), {_,v -> printf(inactive_tab, v, v)})
+  let tab_pages[active_tabpagenr - 1] = printf(active_tab, active_tabpagenr)
+  return join(tab_pages, '')
 endfunction
 
 let g:status_lights = {}
@@ -694,9 +718,9 @@ endfunction
 function! CustomTabline()
   let renderer = s:get_tabline_renderer(&filetype)
   let tabline = ''
-  let tabline ..= '%{%g:tabline_defaults.directory_detail()%}'
+  let tabline ..= '%{%g:tabline_defaults.directory_button()%}'
   let tabline ..= '%{%'..renderer..'()%}'
-  let tabline ..= '%{%g:tabline_defaults.tab_page_detail()%}'
+  let tabline ..= '%{%g:tabline_defaults.tab_page_buttons()%}'
   return tabline
 endfunction
 
@@ -1209,6 +1233,7 @@ function! s:configure_onedark()
   highlight! User4 guifg=#98c379 guibg=#373f4c gui=italic
   highlight! User5 guifg=#282c34 guibg=#e06c75
   highlight! User6 guifg=#98c379
+  highlight! User7 guifg=#98c379
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()

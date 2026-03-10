@@ -974,7 +974,7 @@ set wildignore+=*.bak
 
 " mouse
 set mousemodel=extend
-set mousescroll=ver:1,hor:6
+set mousescroll=ver:2,hor:6
 
 " =====================
 " General Configuration

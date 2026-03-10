@@ -1054,7 +1054,6 @@ Plug 'joshdick/onedark.vim'
 
 Plug 'vimwiki/vimwiki'
 
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'tmsvg/pear-tree'
 
 Plug 'nvim-lua/plenary.nvim'

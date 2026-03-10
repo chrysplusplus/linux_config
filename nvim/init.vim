@@ -894,10 +894,20 @@ function! s:define_word(word) abort
 
   let curl_cmd = "!curl dict.org/d:" .. a:word
   new +set\ bt=nofile
-  execute "read" curl_cmd
+  silent execute "read" curl_cmd
   silent %s/\r//
   silent 1,/^151/-1d _
   silent /^250/,$d _
+endfunction
+
+function! s:define_word_confirm(word) abort
+  if match(a:word, '[A-Za-z]\+') == -1
+    echoerr printf("Cannot define '%s'", a:word)
+    return
+  elseif confirm(printf("Define '%s'?", a:word), "&Yes\n&No", 2) != 1
+    return
+  endif
+  call s:define_word(a:word)
 endfunction
 
 " ========
@@ -982,6 +992,10 @@ command! -bang HideTabline
 "   define word with online dictionary
 command! -nargs=1 Define call <SID>define_word('<args>')
 
+" DefineConfirm
+"   user needs to confirm they want dictionary definition
+command! -nargs=1 DefineConfirm call <SID>define_word_confirm('<args>')
+
 " =================
 " Vim Configuration
 " =================
@@ -1053,6 +1067,9 @@ augroup chrys_ft_markdown
   " set table->plaintext decorators
   autocmd FileType markdown let b:table_plain_before = "```\n"
   autocmd FileType markdown let b:table_plain_after = "\n```"
+
+  " set keywordprg to define a word
+  autocmd FileType markdown setlocal keywordprg=:DefineConfirm
 augroup END
 
 " quickfix-specific
@@ -1129,6 +1146,9 @@ augroup chrys_ft_vimwiki
   " set table->plaintext decorators
   autocmd FileType vimwiki let b:table_plain_before = "```\n"
   autocmd FileType vimwiki let b:table_plain_after = "\n```"
+
+  " set keywordprg to define a word
+  autocmd FileType vimwiki setlocal keywordprg=:DefineConfirm
 augroup END
 
 let personal_wiki = {}

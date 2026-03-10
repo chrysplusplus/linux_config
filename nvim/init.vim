@@ -204,6 +204,16 @@ function! s:config_misc_mappings()
   nnoremap gy g<Tab>
 endfunction
 
+function! s:config_command_keys()
+  " inspired by emacs-keys in the vim manual
+  cnoremap <C-A> <Home>
+  cnoremap <C-B> <Left>
+  cnoremap <C-E> <End>
+  cnoremap <C-F> <Right>
+  cnoremap <Esc>b <S-Left>
+  cnoremap <Esc>f <S-Right>
+endfunction
+
 " global mappings
 call s:config_misc_mappings()
 call s:config_bracket_swapping_mappings()
@@ -211,6 +221,7 @@ call s:config_windowing_mappings()
 call s:config_leader_mappings()
 call s:config_telescope_mappings()
 call s:config_table_mappings()
+call s:config_command_keys()
 
 " filetype-specific mappings
 augroup chrys_ft_mappings

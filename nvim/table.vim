@@ -1590,7 +1590,7 @@ function! s:table_at_cursor_to_plaintext()
 
   for row_i in range(len(table))
     let row = table[row_i]
-    if ! empty(table_headers) && row_i == 0
+    if ! empty(table_headers) && row_i == 0 && len(table) > 1
       continue
     endif
 

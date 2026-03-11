@@ -892,18 +892,33 @@ function! Pprint_number(num)
   return join(reverse(result), g:thousands_sep)
 endfunction
 
-function! s:define_word(word) abort
-  if match(a:word, '[A-Za-z]\+') == -1
-    echoerr printf("Cannot define '%s'", a:word)
-    return
-  endif
-
+function! s:define_word_w_curl(word) abort
   let curl_cmd = "!curl dict.org/d:" .. a:word
-  new +set\ bt=nofile
+  silent execute "new" "+set\\ bt=nofile" "dictionary - " .. a:word
   silent execute "read" curl_cmd
   silent %s/\r//
   silent 1,/^151/-1d _
   silent /^250/,$d _
+endfunction
+
+
+function! s:define_word_w_dict(word) abort
+  let dict_cmd = "!dict " .. a:word
+  silent execute "new" "+set\\ bt=nofile" "dictionary - " .. a:word
+  silent execute "read" dict_cmd
+  normal go
+endfunction
+
+function! s:define_word(word) abort
+  if match(a:word, '[A-Za-z]\+') == -1
+    echoerr printf("Cannot define '%s'", a:word)
+    return
+  elseif executable("dict")
+    call s:define_word_w_dict(a:word)
+  else
+    echomsg "'dict' is not installed on your system"
+    call s:define_word_w_curl(a:word)
+  endif
 endfunction
 
 function! s:define_word_confirm(word) abort

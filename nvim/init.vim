@@ -210,8 +210,6 @@ function! s:config_command_keys()
   cnoremap <C-B> <Left>
   cnoremap <C-E> <End>
   cnoremap <C-F> <Right>
-  cnoremap <Esc>b <S-Left>
-  cnoremap <Esc>f <S-Right>
 endfunction
 
 " global mappings

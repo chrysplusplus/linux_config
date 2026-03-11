@@ -894,7 +894,7 @@ endfunction
 
 function! s:define_word_w_curl(word) abort
   let curl_cmd = "!curl dict.org/d:" .. a:word
-  silent execute "new" "+set\\ bt=nofile" "dictionary - " .. a:word
+  silent execute "new" "+set\\ bt=nofile\\ ft=dictionary" "dictionary - " .. a:word
   silent execute "read" curl_cmd
   silent %s/\r//
   silent 1,/^151/-1d _
@@ -917,7 +917,7 @@ endfunction
 
 function! s:define_word_w_dict(word) abort
   let dict_cmd = "!dict " .. a:word
-  silent execute "new" "+set\\ bt=nofile" "dictionary - " .. a:word
+  silent execute "new" "+set\\ bt=nofile\\ ft=dictionary" "dictionary - " .. a:word
   silent execute "read" dict_cmd
   normal go
 endfunction
@@ -1096,9 +1096,6 @@ augroup chrys_ft_markdown
   " set textwidth for markdown
   autocmd FileType markdown setlocal textwidth=80
 
-  " disable suggestions for markdown
-  autocmd FileType markdown let b:coc_suggest_disable = 1
-
   " set conceallevel for markdown
   autocmd FileType markdown setlocal conceallevel=2
 
@@ -1114,6 +1111,12 @@ augroup END
 augroup chrys_ft_qf
   autocmd!
   autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
+augroup END
+
+" dictionary specific (for define buffers)
+augroup chrys_ft_dictionary
+  autocmd!
+  autocmd FileType dictionary setlocal keywordprg=:DefineConfirm
 augroup END
 
 " =======

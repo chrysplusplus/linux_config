@@ -901,6 +901,19 @@ function! s:define_word_w_curl(word) abort
   silent /^250/,$d _
 endfunction
 
+function! s:call_dict(cmd_args) abort
+  if match(a:cmd_args, '[A-Za-z -]\+') == -1
+    echoerr printf("Invalid args to dict: '%s'", a:cmd_args)
+    return
+  elseif ! executable("dict")
+    echoerr "'dict' is not installed on your system"
+    return
+  endif
+
+  new +set\ bt=nofile
+  silent execute "read" "!dict" a:cmd_args
+  normal go
+endfunction
 
 function! s:define_word_w_dict(word) abort
   let dict_cmd = "!dict " .. a:word
@@ -1016,6 +1029,10 @@ command! -nargs=1 Define call <SID>define_word('<args>')
 " DefineConfirm
 "   user needs to confirm they want dictionary definition
 command! -nargs=1 DefineConfirm call <SID>define_word_confirm('<args>')
+
+" Dict
+"   read result of dict command into new buffer
+command! -nargs=1 Dict call <SID>call_dict('<args>')
 
 " =================
 " Vim Configuration

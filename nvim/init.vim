@@ -228,9 +228,6 @@ augroup chrys_ft_mappings
   autocmd FileType cpp call s:config_cpp_mappings()
   autocmd FileType netrw call s:config_netrw_mappings()
 
-  " <C-J> in insert mode in python files refreshes coc
-  autocmd FileType python inoremap <buffer> <silent> <C-J> <CMD>call coc#refresh()<CR>
-
   " restore default backspace mapping for filetypes with pear-tree disabled
   autocmd FileType TelescopePrompt inoremap <buffer> <BS> <BS>
 augroup END
@@ -1032,7 +1029,7 @@ set shiftwidth=2
 set expandtab
 
 " path and ignore
-set path+=**
+"set path+=** " disabled because it caused an issue with :isearch
 set wildignore+=*/__pycache__
 set wildignore+=*/__pycache__/*
 set wildignore+=*.bak

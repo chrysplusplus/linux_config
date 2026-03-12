@@ -892,13 +892,25 @@ function! Pprint_number(num)
   return join(reverse(result), g:thousands_sep)
 endfunction
 
+let g:cached_define_buffers = {}
+
+function! s:find_cached_buffer(word)
+  let cached_bufnr = get(g:cached_define_buffers, a:word, 0)
+  if cached_bufnr == 0
+    return 0
+  else
+    return bufloaded(cached_bufnr) ? cached_bufnr : 0
+  endif
+endfunction
+
 function! s:define_word_w_curl(word) abort
   let curl_cmd = "!curl dict.org/d:" .. a:word
-  silent execute "new" "+set\\ bt=nofile\\ ft=dictionary" "dictionary - " .. a:word
+  silent execute "new" "+set\\ bt=nofile\\ nobl\\ ft=dictionary" "dictionary - " .. a:word
   silent execute "read" curl_cmd
   silent %s/\r//
   silent 1,/^151/-1d _
   silent /^250/,$d _
+  let g:cached_define_buffers[a:word] = bufnr()
 endfunction
 
 function! s:call_dict(cmd_args) abort
@@ -917,15 +929,21 @@ endfunction
 
 function! s:define_word_w_dict(word) abort
   let dict_cmd = "!dict " .. a:word
-  silent execute "new" "+set\\ bt=nofile\\ ft=dictionary" "dictionary - " .. a:word
+  silent execute "new" "+set\\ bt=nofile\\ nobl\\ ft=dictionary" "dictionary - " .. a:word
   silent execute "read" dict_cmd
   normal go
+  let g:cached_define_buffers[a:word] = bufnr()
 endfunction
 
 function! s:define_word(word) abort
   if match(a:word, '[A-Za-z]\+') == -1
     echoerr printf("Cannot define '%s'", a:word)
     return
+  endif
+
+  let cached_bufnr = s:find_cached_buffer(a:word)
+  if cached_bufnr != 0
+    execute "new" "+set\\ nobl" "#"..cached_bufnr
   elseif executable("dict")
     call s:define_word_w_dict(a:word)
   else

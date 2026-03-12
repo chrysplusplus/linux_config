@@ -1119,6 +1119,12 @@ augroup chrys_ft_dictionary
   autocmd FileType dictionary setlocal keywordprg=:DefineConfirm
 augroup END
 
+" reminder specific (for reminder files)
+augroup chrys_ft_reminder
+  autocmd!
+  autocmd FileType reminder autocmd BufLeave <buffer> call SaveCurrentModifiedFile()
+augroup END
+
 " =======
 " Plugins
 " =======

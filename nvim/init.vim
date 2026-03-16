@@ -119,6 +119,8 @@ function! s:config_leader_mappings()
   " \g to open fugitive buffer and Alt-G
   nnoremap <silent> <expr> <Leader>g exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
   nnoremap <silent> <expr> <M-g> exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
+  " \re to run ReadMode command
+  nnoremap <silent> <Leader>re <CMD>ReadMode<CR>
 endfunction
 
 function! s:config_windowing_mappings()

@@ -559,6 +559,11 @@ function! g:tabline_renderer.vimwiki()
 endfunction
 
 function! s:check_trailing_space(bufnr)
+  if getbufvar(a:bufnr, "statusline_no_trailing", 0)
+    call setbufvar(a:bufnr, "statusline_trailing_linenr", 0)
+    return
+  endif
+
   let matches = matchbufline(a:bufnr, '\s\+$', 1, '$')
   if empty(matches)
     call setbufvar(a:bufnr, "statusline_trailing_linenr", 0)
@@ -589,6 +594,11 @@ function! s:check_branch_state(bufnr)
 endfunction
 
 function! s:check_tabs(bufnr)
+  if getbufvar(a:bufnr, "statusline_no_tabs", 0)
+    call setbufvar(a:bufnr, "statusline_bad_tab", {})
+    return
+  endif
+
   let tab_matches = matchbufline(a:bufnr, '\t', 1, '$')
   if len(tab_matches) == 0
     call setbufvar(a:bufnr, "statusline_bad_tab", {})

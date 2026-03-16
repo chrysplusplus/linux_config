@@ -305,7 +305,7 @@ endfunction
 
 " status lights read mode renderer
 function! g:status_lights.readmode_renderer()
-  return &scrolloff == 999 ? 'READ' : ''
+  return exists("b:read_mode_restore_opts") ? 'READ' : ''
 endfunction
 
 let g:status_lights.flags = {
@@ -962,6 +962,44 @@ function! s:define_word_confirm(word) abort
   call s:define_word(a:word)
 endfunction
 
+function! s:add_mapping_if_buffer_local(dict, key, mapping)
+  if empty(a:mapping)
+    return
+  elseif a:mapping.buffer
+    let a:dict[a:key] = a:mapping
+  endif
+endfunction
+
+function! s:restore_mapping_if_exists(dict, key)
+  let mapping = get(a:dict, a:key, {})
+  if !empty(mapping)
+    call mapset(mapping)
+  endif
+endfunction
+
+function! s:get_mapping(lhs, mode)
+  return maparg(a:lhs, a:mode, v:false, v:true)
+endfunction
+
+function! s:toggle_read_mode() abort
+  let restore_opts = get(b:, "read_mode_restore_opts", {})
+  if empty(restore_opts)
+    let restore_opts = {}
+    let restore_opts.timestamp = localtime()
+    call s:add_mapping_if_buffer_local(restore_opts, "j_nmap", s:get_mapping('j', 'n'))
+    call s:add_mapping_if_buffer_local(restore_opts, "k_nmap", s:get_mapping('k', 'n'))
+    nnoremap <silent> <buffer> j <C-D>
+    nnoremap <silent> <buffer> k <C-U>
+    let b:read_mode_restore_opts = restore_opts
+  else
+    unmap <buffer> j
+    unmap <buffer> k
+    call s:restore_mapping_if_exists(restore_opts, 'j_nmap')
+    call s:restore_mapping_if_exists(restore_opts, 'k_nmap')
+    unlet b:read_mode_restore_opts
+  endif
+endfunction
+
 " ========
 " Commands
 " ========
@@ -989,13 +1027,8 @@ command! UndoLastClose call UndoLastClose()
 command! Scratch new +set\ bt=nofile
 
 " ReadMode
-"   toggle scrolloff setting for using j and k for easy reading
-command! ReadMode
-      \ if &scrolloff == 999      |
-      \   setlocal scrolloff<     |
-      \ else                      |
-      \   setlocal scrolloff=999  |
-      \ endif
+"   toggle mode for using j and k for easy reading
+command! ReadMode call <SID>toggle_read_mode()
 
 " ConfigureLights
 "   configure status lights for the current window

@@ -1003,12 +1003,14 @@ function! s:toggle_read_mode() abort
     nnoremap <silent> <buffer> j <C-D>
     nnoremap <silent> <buffer> k <C-U>
     let b:read_mode_restore_opts = restore_opts
+    let &ro = &ro " update statusline
   else
     unmap <buffer> j
     unmap <buffer> k
     call s:restore_mapping_if_exists(restore_opts, 'j_nmap')
     call s:restore_mapping_if_exists(restore_opts, 'k_nmap')
     unlet b:read_mode_restore_opts
+    let &ro = &ro " update statusline
   endif
 endfunction
 

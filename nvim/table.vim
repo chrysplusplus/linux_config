@@ -146,6 +146,25 @@
 "
 " Defaults to 0
 "
+" Customisation Variable: g:table_inhibit_navigation_keys
+"
+" If non-zero, the script will not map keys for navigating the table, which
+" are the H, J, K and L keys, analogous to typical vim movement, just with the
+" shift key held! Inhibiting this behaviour may be desired if the mappings
+" would conflict, which they almost certainly do -- which is why this script
+" was reimplemented to be modal -- or the user prefers custom mappings. See
+" the Mappings section for the available plug-mappings. For example:
+"
+" :nnoremap <Leader>th <Plug>(TableLeftCell)
+" :nnoremap <Leader>tl <Plug>(TableRightCell)
+" :nnoremap <Leader>tj <Plug>(TableDownCell)
+" :nnoremap <Leader>tk <Plug>(TableUpCell)
+"
+" These commands would map the movement keys to have <Leader>t as a prefix,
+" which was the mapping that this script used to use.
+"
+" Defaults to 0
+"
 " Customisation Variable: g:table_jump_to_end
 "
 " If non-zero, the jump commands for moving between cells in a table will go
@@ -180,6 +199,8 @@
 " and then PlainToTable.
 "
 " Defaults to ""
+"
+" TODO: Document autocmd hooks
 
 " ================
 " Script Constants
@@ -1367,6 +1388,18 @@ function! s:split_col_text(linenr, colnr) "-> [String, String]
   return [before, after]
 endfunction
 
+function! s:table_mode_toggle()
+  if ! get(b:, "table_mode", 0)
+    let b:table_mode = 1
+    doautocmd User TableModeEnable
+    echo "Table Mode enabled"
+  else
+    unlet b:table_mode
+    doautocmd User TableModeDisable
+    echo "Table Mode disabled"
+  endif
+endfunction
+
 " ====================
 " Formatting Functions
 " ====================
@@ -1929,15 +1962,43 @@ endfunction
 " Autocommands
 " ============
 
-augroup table_edit
+function! s:au_table_mode_enable()
+  augroup table_edit
+    autocmd!
+    autocmd InsertEnter <buffer> call <SID>au_insert_enter()
+    autocmd InsertLeave <buffer> call <SID>au_insert_leave()
+  augroup END
+
+  call s:key_mappings()
+  call s:leader_key_mappings()
+  call s:text_object_key_mappings()
+  call s:nav_key_mappings()
+  call s:commands()
+endfunction
+
+function! s:au_table_mode_disable()
+  augroup table_edit
+    autocmd!
+  augroup END
+
+  call s:no_key_mappings()
+  call s:no_leader_key_mappings()
+  call s:no_text_object_key_mappings()
+  call s:no_nav_key_mappings()
+  call s:no_commands()
+endfunction
+
+augroup table_mode
   autocmd!
-  autocmd InsertEnter * call <SID>au_insert_enter()
-  autocmd InsertLeave * call <SID>au_insert_leave()
+  autocmd User TableModeEnable call <SID>au_table_mode_enable()
+  autocmd User TableModeDisable call <SID>au_table_mode_disable()
 augroup END
 
 " ========
 " Mappings
 " ========
+
+" TODO add some documentation, since the customisation section points here
 
 nnoremap <silent> <Plug>(TableMake) <CMD>call <SID>plug_make()<CR>
 nnoremap <silent> <Plug>(TableNextCell) <CMD>call <SID>plug_next_cell()<CR>
@@ -1970,59 +2031,138 @@ nnoremap <silent> <Plug>(TableLineAppend) <CMD>call <SID>plug_line_append()<CR>
 nnoremap <silent> <Plug>(TableBegin) <CMD>call <SID>plug_table_begin()<CR>
 nnoremap <silent> <Plug>(TableEnd) <CMD>call <SID>plug_table_end()<CR>
 
-inoremap <silent> <expr> <CR> <SID>imap_return()
-inoremap <silent> <expr> <Tab> <SID>imap_tab()
-inoremap <silent> <expr> <S-Tab> <SID>imap_stab()
-inoremap <silent> <expr> <BS> <SID>imap_backspace()
-inoremap <silent> <expr> <Space> <SID>imap_space()
-nnoremap <silent> <expr> { <SID>nmap_left_curly()
-nnoremap <silent> <expr> } <SID>nmap_right_curly()
-nnoremap <silent> <expr> o <SID>nmap_o()
-nnoremap <silent> <expr> O <SID>nmap_O()
-nnoremap <silent> <expr> I <SID>nmap_I()
-nnoremap <silent> <expr> A <SID>nmap_A()
-nnoremap <silent> [{ <Plug>(TableBegin)
-nnoremap <silent> ]} <Plug>(TableEnd)
-inoremap <silent> <expr> <C-w> <SID>imap_ctrl_w()
+function! s:key_mappings()
+  inoremap <buffer> <silent> <expr> <CR> <SID>imap_return()
+  inoremap <buffer> <silent> <expr> <Tab> <SID>imap_tab()
+  inoremap <buffer> <silent> <expr> <S-Tab> <SID>imap_stab()
+  inoremap <buffer> <silent> <expr> <BS> <SID>imap_backspace()
+  inoremap <buffer> <silent> <expr> <Space> <SID>imap_space()
+  nnoremap <buffer> <silent> <expr> { <SID>nmap_left_curly()
+  nnoremap <buffer> <silent> <expr> } <SID>nmap_right_curly()
+  nnoremap <buffer> <silent> <expr> o <SID>nmap_o()
+  nnoremap <buffer> <silent> <expr> O <SID>nmap_O()
+  nnoremap <buffer> <silent> <expr> I <SID>nmap_I()
+  nnoremap <buffer> <silent> <expr> A <SID>nmap_A()
+  nnoremap <buffer> <silent> [{ <Plug>(TableBegin)
+  nnoremap <buffer> <silent> ]} <Plug>(TableEnd)
+  inoremap <buffer> <silent> <expr> <C-w> <SID>imap_ctrl_w()
+endfunction
 
-if ! get(g:, "table_inhibit_leader_keys", 0)
-  nnoremap <silent> <Leader>tt <CMD>FormatTable<CR>
-  nnoremap <silent> <Leader>ti <Plug>(TableCellInsert)
-  nnoremap <silent> <Leader>tr <CMD>ResizeTableColumn<CR>
-  nnoremap <silent> <Leader>th <Plug>(TableLeftCell)
-  nnoremap <silent> <Leader>tl <Plug>(TableRightCell)
-  nnoremap <silent> <Leader>tj <Plug>(TableDownCell)
-  nnoremap <silent> <Leader>tk <Plug>(TableUpCell)
-endif
+function! s:no_key_mappings()
+  iunmap <buffer> <CR>
+  iunmap <buffer> <Tab>
+  iunmap <buffer> <S-Tab>
+  iunmap <buffer> <BS>
+  iunmap <buffer> <Space>
+  nunmap <buffer> {
+  nunmap <buffer> }
+  nunmap <buffer> o
+  nunmap <buffer> O
+  nunmap <buffer> I
+  nunmap <buffer> A
+  nunmap <buffer> [{
+  nunmap <buffer> ]}
+  iunmap <buffer> <C-w>
+endfunction
 
-if ! get(g:, "table_inhibit_text_objects", 0)
-  nnoremap <silent> <Leader>tc <Plug>(TableSelectCell)
-  vnoremap <silent> <Leader>tc <Plug>(VTableSelectCell)
-  onoremap <silent> <Leader>tc <Plug>(OTableSelectCell)
-  nnoremap <silent> <Leader>tC <Plug>(TableSelectCol)
-  vnoremap <silent> <Leader>tC <Plug>(VTableSelectCol)
-  onoremap <silent> <Leader>tC <Plug>(OTableSelectCol)
-  nnoremap <silent> <Leader>tR <Plug>(TableSelectRow)
-  vnoremap <silent> <Leader>tR <Plug>(VTableSelectRow)
-  onoremap <silent> <Leader>tR <Plug>(OTableSelectRow)
+function! s:leader_key_mappings()
+  if ! get(g:, "table_inhibit_leader_keys", 0)
+    nnoremap <buffer> <silent> <Leader>tt <CMD>FormatTable<CR>
+    nnoremap <buffer> <silent> <Leader>ti <Plug>(TableCellInsert)
+    nnoremap <buffer> <silent> <Leader>tr <CMD>ResizeTableColumn<CR>
+  endif
+endfunction
+
+function! s:no_leader_key_mappings()
+  if ! get(g:, "table_inhibit_leader_keys", 0)
+    nunmap <buffer> <Leader>tt
+    nunmap <buffer> <Leader>ti
+    nunmap <buffer> <Leader>tr
+  endif
+endfunction
+
+function! s:text_object_key_mappings()
+  if ! get(g:, "table_inhibit_text_objects", 0)
+    nnoremap <buffer> <silent> <Leader>tc <Plug>(TableSelectCell)
+    vnoremap <buffer> <silent> <Leader>tc <Plug>(VTableSelectCell)
+    onoremap <buffer> <silent> <Leader>tc <Plug>(OTableSelectCell)
+    nnoremap <buffer> <silent> <Leader>tC <Plug>(TableSelectCol)
+    vnoremap <buffer> <silent> <Leader>tC <Plug>(VTableSelectCol)
+    onoremap <buffer> <silent> <Leader>tC <Plug>(OTableSelectCol)
+    nnoremap <buffer> <silent> <Leader>tR <Plug>(TableSelectRow)
+    vnoremap <buffer> <silent> <Leader>tR <Plug>(VTableSelectRow)
+    onoremap <buffer> <silent> <Leader>tR <Plug>(OTableSelectRow)
+  endif
+endfunction
+
+function! s:no_text_object_key_mappings()
+  if ! get(g:, "table_inhibit_text_objects", 0)
+    nunmap <buffer> <Leader>tc
+    vunmap <buffer> <Leader>tc
+    ounmap <buffer> <Leader>tc
+    nunmap <buffer> <Leader>tC
+    vunmap <buffer> <Leader>tC
+    ounmap <buffer> <Leader>tC
+    nunmap <buffer> <Leader>tR
+    vunmap <buffer> <Leader>tR
+    ounmap <buffer> <Leader>tR
+  endif
+endfunction
+
+function! s:nav_key_mappings()
+  if ! get(g:, "table_inhibit_navigation_keys", 0)
+    nnoremap <buffer> <silent> H <Plug>(TableLeftCell)
+    nnoremap <buffer> <silent> L <Plug>(TableRightCell)
+    nnoremap <buffer> <silent> J <Plug>(TableDownCell)
+    nnoremap <buffer> <silent> K <Plug>(TableUpCell)
+  endif
+endfunction
+
+function! s:no_nav_key_mappings()
+  if ! get(g:, "table_inhibit_navigation_keys", 0)
+    nunmap <buffer> H
+    nunmap <buffer> L
+    nunmap <buffer> J
+    nunmap <buffer> K
+  endif
+endfunction
+
+if ! get(g:, "table_inhibit_mode_toggle_key", 0)
+  nnoremap <silent> t<CR> <CMD>TableMode<CR>
 endif
 
 " ========
 " Commands
 " ========
 
-command! FormatTable call <SID>format_table_at_cursor()
-command! -nargs=? ResizeTableColumn call <SID>resize_table_at_cursor(<args>)
-command! InsertRow call <SID>insert_row_at_cursor()
-command! -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
-command! TableToPlain call <SID>table_at_cursor_to_plaintext()
-command! PlainToTable call <SID>plaintext_at_cursor_to_table()
-command! -bang FancyTable
-      \ if empty(<q-bang>)                    |
-      \   call <SID>fancy_table_at_cursor()   |
-      \ else                                  |
-      \   call <SID>unfancy_table_at_cursor() |
-      \ endif
+function! s:commands()
+  command! -buffer FormatTable call <SID>format_table_at_cursor()
+  command! -buffer -nargs=? ResizeTableColumn call <SID>resize_table_at_cursor(<args>)
+  command! -buffer InsertRow call <SID>insert_row_at_cursor()
+  command! -buffer -nargs=1 InsertColumn call <SID>insert_col_at_cursor(<args>)
+
+  " TODO consider these commands as extensions
+  command! -buffer TableToPlain call <SID>table_at_cursor_to_plaintext()
+  command! -buffer PlainToTable call <SID>plaintext_at_cursor_to_table()
+  command! -buffer -bang FancyTable
+        \ if empty(<q-bang>)                    |
+        \   call <SID>fancy_table_at_cursor()   |
+        \ else                                  |
+        \   call <SID>unfancy_table_at_cursor() |
+        \ endif
+endfunction
+
+function! s:no_commands()
+  delcommand -buffer FormatTable
+  delcommand -buffer ResizeTableColumn
+  delcommand -buffer InsertRow
+  delcommand -buffer InsertColumn
+  delcommand -buffer TableToPlain
+  delcommand -buffer PlainToTable
+  delcommand -buffer FancyTable
+endfunction
+
+command! TableMode call <SID>table_mode_toggle()
 
 " ==========
 " Extensions

@@ -54,11 +54,11 @@ function! s:config_vimwiki_mappings()
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
   " dispatch return key to table.vim and vimwiki
-  inoremap <buffer><expr><silent> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
+  "inoremap <buffer><expr><silent> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
   " dispatch o to table.vim and vimwiki
-  nmap <buffer><expr> o TableIsCursorInTable() ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
+  "nmap <buffer><expr> o TableIsCursorInTable() ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
   " dispatch O to table.vim and vimwiki
-  nmap <buffer><expr> O TableIsCursorInTable() ? <SID>table_nmap_O() : '<Plug>VimwikiListO'
+  "nmap <buffer><expr> O TableIsCursorInTable() ? <SID>table_nmap_O() : '<Plug>VimwikiListO'
 endfunction
 
 function! s:config_cpp_mappings()
@@ -78,14 +78,14 @@ endfunction
 
 function! s:config_table_mappings()
   " dispatch for pear-tree compatibility
-  inoremap <silent><expr> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
-  inoremap <silent><expr> <BS> TableIsCursorInTable() ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
+  "inoremap <silent><expr> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
+  "inoremap <silent><expr> <BS> TableIsCursorInTable() ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
 
   " table navigation
-  nnoremap <expr> H TableIsCursorInTable() ? '<Plug>(TableLeftCell)'  : 'H'
-  nnoremap <expr> J TableIsCursorInTable() ? '<Plug>(TableDownCell)'  : 'J'
-  nnoremap <expr> K TableIsCursorInTable() ? '<Plug>(TableUpCell)'    : 'K'
-  nnoremap <expr> L TableIsCursorInTable() ? '<Plug>(TableRightCell)' : 'L'
+  "nnoremap <expr> H TableIsCursorInTable() ? '<Plug>(TableLeftCell)'  : 'H'
+  "nnoremap <expr> J TableIsCursorInTable() ? '<Plug>(TableDownCell)'  : 'J'
+  "nnoremap <expr> K TableIsCursorInTable() ? '<Plug>(TableUpCell)'    : 'K'
+  "nnoremap <expr> L TableIsCursorInTable() ? '<Plug>(TableRightCell)' : 'L'
 endfunction
 
 function! s:config_telescope_mappings()
@@ -263,6 +263,17 @@ function! g:status_lights.readmode_renderer()
   return exists("b:read_mode_restore_opts") ? 'READ' : ''
 endfunction
 
+" status lights table mode renderer
+function! g:status_lights.tablemode_renderer()
+  return exists("b:table_mode") ? 'TABLE' : ''
+endfunction
+
+augroup chrys_status_lights
+  " changing table mode updates statusline
+  autocmd User TableModeEnable let &ro = &ro
+  autocmd User TableModeDisable let &ro = &ro
+augroup END
+
 let g:status_lights.flags = {
       \ 'virtualedit': ['ve', {val -> val != ''}],
       \ 'colorcolumn': ['cc', {val -> val != ''}],
@@ -315,6 +326,7 @@ endfunction
 let g:status_lights.default_lights = [
       \ g:status_lights.filetype_renderer,
       \ g:status_lights.readmode_renderer,
+      \ g:status_lights.tablemode_renderer,
       \ g:status_lights.flags_renderer,
       \ g:status_lights.symbols_renderer,
       \ g:status_lights.hlsearch_renderer,
@@ -336,7 +348,7 @@ endfunction
 
 " status lights customisation
 let g:status_lights.known_lights = [
-      \ "filetype", "flags", "readmode", "symbols", "hlsearch"
+      \ "filetype", "flags", "readmode", "tablemode", "symbols", "hlsearch"
       \ ]
 
 " ConfigureLights(lights)

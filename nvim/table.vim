@@ -212,65 +212,9 @@ let s:table_make_pattern = '^|\(\d\+|\)\+$'
 
 let s:min_column_width = 5
 
-" ===================
-" Vim Interaction API
-" ===================
-
-function! s:au_insert_enter()
-  " callback for InsertEnter autocommand
-  if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
-    return
-  elseif get(b:, "table_working", 0)
-    return
-  endif
-
-  let [linenr, colnr] = s:cursor_pos()
-  let line = getline(linenr)
-  if s:matches(line, s:table_make_pattern)
-    return
-  elseif s:matches(line, s:table_sep_pattern)
-    return
-  elseif ! s:matches(line, s:table_pattern)
-    return
-  endif
-
-  let this_col_idx = s:col_idx_from_line(line, colnr)
-  let header = s:find_first_sep(linenr)
-  let cols = s:cols_on_line(header)
-  let max_col_idx = s:max_col_idx_from_line(getline(header))
-  if this_col_idx > max_col_idx
-    return
-  endif
-
-  let b:table_wrap_colnr = 1
-  for col_idx in range(0, this_col_idx)
-    let column_width = cols[col_idx]
-    let b:table_wrap_colnr += column_width + 3
-  endfor
-
-  let b:table_wrap_colnr -= 1
-endfunction
-
-function! s:au_insert_leave()
-  " callback for InsertLeave autocommand
-  if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
-    return
-  elseif get(b:, "table_working", 0)
-    return
-  endif
-
-  if exists("b:table_wrap_colnr")
-    unlet b:table_wrap_colnr
-  endif
-
-  let current_line = getline('.')
-  if s:matches(current_line, s:table_make_pattern)
-    let b:table_working = 1
-    call s:plug_make()
-  elseif s:matches(current_line, s:table_pattern)
-    call s:format_table_at_cursor()
-  endif
-endfunction
+" =================
+" Mapping Endpoints
+" =================
 
 function! s:imap_return() "-> mapping
   " key mapping evaluator for CR
@@ -1012,7 +956,6 @@ function! s:plug_table_end()
 
   call setcursorcharpos(last_sep + 1, 0)
 endfunction
-
 
 " =========
 " Functions
@@ -1961,6 +1904,62 @@ endfunction
 " ============
 " Autocommands
 " ============
+
+function! s:au_insert_enter()
+  " callback for InsertEnter autocommand
+  if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
+    return
+  elseif get(b:, "table_working", 0)
+    return
+  endif
+
+  let [linenr, colnr] = s:cursor_pos()
+  let line = getline(linenr)
+  if s:matches(line, s:table_make_pattern)
+    return
+  elseif s:matches(line, s:table_sep_pattern)
+    return
+  elseif ! s:matches(line, s:table_pattern)
+    return
+  endif
+
+  let this_col_idx = s:col_idx_from_line(line, colnr)
+  let header = s:find_first_sep(linenr)
+  let cols = s:cols_on_line(header)
+  let max_col_idx = s:max_col_idx_from_line(getline(header))
+  if this_col_idx > max_col_idx
+    return
+  endif
+
+  let b:table_wrap_colnr = 1
+  for col_idx in range(0, this_col_idx)
+    let column_width = cols[col_idx]
+    let b:table_wrap_colnr += column_width + 3
+  endfor
+
+  let b:table_wrap_colnr -= 1
+endfunction
+
+function! s:au_insert_leave()
+  " callback for InsertLeave autocommand
+  if ! get(b:, "table_auto_format", get(g:, "table_auto_format", 1))
+    return
+  elseif get(b:, "table_working", 0)
+    return
+  endif
+
+  if exists("b:table_wrap_colnr")
+    unlet b:table_wrap_colnr
+  endif
+
+  let current_line = getline('.')
+  if s:matches(current_line, s:table_make_pattern)
+    let b:table_working = 1
+    call s:plug_make()
+  elseif s:matches(current_line, s:table_pattern)
+    call s:format_table_at_cursor()
+  endif
+endfunction
 
 function! s:au_table_mode_enable()
   augroup table_edit

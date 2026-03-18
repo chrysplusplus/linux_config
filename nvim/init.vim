@@ -80,6 +80,12 @@ function! s:config_table_mappings()
   " dispatch for pear-tree compatibility
   inoremap <silent><expr> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
   inoremap <silent><expr> <BS> TableIsCursorInTable() ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
+
+  " table navigation
+  nnoremap <expr> H TableIsCursorInTable() ? '<Plug>(TableLeftCell)'  : 'H'
+  nnoremap <expr> J TableIsCursorInTable() ? '<Plug>(TableDownCell)'  : 'J'
+  nnoremap <expr> K TableIsCursorInTable() ? '<Plug>(TableUpCell)'    : 'K'
+  nnoremap <expr> L TableIsCursorInTable() ? '<Plug>(TableRightCell)' : 'L'
 endfunction
 
 function! s:config_telescope_mappings()
@@ -123,56 +129,7 @@ function! s:config_leader_mappings()
   nnoremap <silent> <Leader>re <CMD>ReadMode<CR>
 endfunction
 
-function! s:config_windowing_mappings()
-  " Alt + key bindings
-  nnoremap <M-q> <C-W>q
-  nnoremap <M-w> <C-W>w
-  nnoremap <M-r> <C-W>r
-  nnoremap <M-t> <C-W>t
-  nnoremap <M-o> <C-W>o
-  nnoremap <M-p> <C-W>p
-  nnoremap <M-s> <C-W>s
-
-  " these four double as table navigation so I also use the leader key to
-  " 'escape' the table context
-  nnoremap <expr> <M-h> TableIsCursorInTable() ? '<Plug>(TableLeftCell)'  : '<C-W>h'
-  nnoremap <expr> <M-j> TableIsCursorInTable() ? '<Plug>(TableDownCell)'  : '<C-W>j'
-  nnoremap <expr> <M-k> TableIsCursorInTable() ? '<Plug>(TableUpCell)'    : '<C-W>k'
-  nnoremap <expr> <M-l> TableIsCursorInTable() ? '<Plug>(TableRightCell)' : '<C-W>l'
-  nnoremap <Leader><M-h> <C-W>h
-  nnoremap <Leader><M-j> <C-W>j
-  nnoremap <Leader><M-k> <C-W>k
-  nnoremap <Leader><M-l> <C-W>l
-
-  nnoremap <M-x> <C-W>x
-  nnoremap <M-v> <C-W>v
-  nnoremap <M-b> <C-W>b
-
-  nnoremap <M-S-h> <C-W>H
-  nnoremap <M-S-j> <C-W>J
-  nnoremap <M-S-k> <C-W>K
-  nnoremap <M-S-l> <C-W>L
-
-  " Alt + t to split window to new tab
-  nnoremap <M-t> <C-W>s<C-W>T
-
-  " Alt + number key bindings to go to window
-  nnoremap <M-1> 1<C-W>w
-  nnoremap <M-2> 2<C-W>w
-  nnoremap <M-3> 3<C-W>w
-  nnoremap <M-4> 4<C-W>w
-  nnoremap <M-5> 5<C-W>w
-  nnoremap <M-6> 6<C-W>w
-  nnoremap <M-7> 7<C-W>w
-  nnoremap <M-8> 8<C-W>w
-  nnoremap <M-9> 9<C-W>w
-
-  " Alt + - to 'zoom' current window (Ctr-W _)
-  nnoremap <M--> <C-W>_<C-W><bar>
-
-  " Alt + = to 'equalise' windows
-  nnoremap <M-=> <C-W>=
-endfunction
+" NOTE: alt window mappings were removed for an experiment
 
 function! s:config_bracket_swapping_mappings()
   nnoremap <silent> <Leader>r( m'%r)`'r(
@@ -201,9 +158,6 @@ function! s:config_misc_mappings()
 
   " Q to format paragraph without jumping
   nnoremap Q gwap
-
-  " gy to g<Tab>
-  nnoremap gy g<Tab>
 endfunction
 
 function! s:config_command_keys()
@@ -217,7 +171,6 @@ endfunction
 " global mappings
 call s:config_misc_mappings()
 call s:config_bracket_swapping_mappings()
-call s:config_windowing_mappings()
 call s:config_leader_mappings()
 call s:config_telescope_mappings()
 call s:config_table_mappings()

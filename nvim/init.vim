@@ -53,12 +53,6 @@ function! s:config_vimwiki_mappings()
   nmap <buffer> - <Plug>VinegarUp
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
-  " dispatch return key to table.vim and vimwiki
-  "inoremap <buffer><expr><silent> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : pumvisible() ? "\<CR>" : "\<C-]>\<Esc>:VimwikiReturn 1 5\<CR>"
-  " dispatch o to table.vim and vimwiki
-  "nmap <buffer><expr> o TableIsCursorInTable() ? <SID>table_nmap_o() : '<Plug>VimwikiListo'
-  " dispatch O to table.vim and vimwiki
-  "nmap <buffer><expr> O TableIsCursorInTable() ? <SID>table_nmap_O() : '<Plug>VimwikiListO'
 endfunction
 
 function! s:config_cpp_mappings()
@@ -72,20 +66,6 @@ function! s:config_netrw_mappings()
   nnoremap <silent> <buffer> P <CMD>pclose<CR>
   " warn on moving
   nnoremap <silent> <buffer> mm <CMD>echoerr 'mm has been unmapped'<CR>
-  " Ctrl-Q to return to alt buffer (disabled)
-  "nnoremap <buffer> <C-Q> <C-^>
-endfunction
-
-function! s:config_table_mappings()
-  " dispatch for pear-tree compatibility
-  "inoremap <silent><expr> <CR> TableIsCursorInTable() ? <SID>table_imap_return() : "\<Plug>(PearTreeExpand)"
-  "inoremap <silent><expr> <BS> TableIsCursorInTable() ? <SID>table_imap_backspace() : "\<Plug>(PearTreeBackspace)"
-
-  " table navigation
-  "nnoremap <expr> H TableIsCursorInTable() ? '<Plug>(TableLeftCell)'  : 'H'
-  "nnoremap <expr> J TableIsCursorInTable() ? '<Plug>(TableDownCell)'  : 'J'
-  "nnoremap <expr> K TableIsCursorInTable() ? '<Plug>(TableUpCell)'    : 'K'
-  "nnoremap <expr> L TableIsCursorInTable() ? '<Plug>(TableRightCell)' : 'L'
 endfunction
 
 function! s:config_telescope_mappings()
@@ -173,7 +153,6 @@ call s:config_misc_mappings()
 call s:config_bracket_swapping_mappings()
 call s:config_leader_mappings()
 call s:config_telescope_mappings()
-call s:config_table_mappings()
 call s:config_command_keys()
 
 " filetype-specific mappings
@@ -1211,7 +1190,7 @@ augroup chrys_ft_vimwiki
   autocmd FileType vimwiki command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
 
   " auto update last modified date text
-  autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?:', printf(" %S", getreg('d')))
+  "autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?:', printf(" %S", getreg('d')))
 
   " TodayHeader jump to header with today's date (vimwiki only)
   autocmd FileType vimwiki command! -buffer TodayHeader call search(printf('^#\+ %s', getreg('d')))

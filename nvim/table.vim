@@ -1038,7 +1038,7 @@ endfunction
 function! s:cols_on_line(linenr) "->  List[Number]
   " return column widths from table header
   let header = getline(s:find_first_sep(a:linenr))
-  return map(split(header, '|'), "len(v:val) - 2")
+  return map(split(header, '|'), "strcharlen(v:val) - 2")
 endfunction
 
 function! s:cursor_is_out_of_bounds(linenr, colnr)
@@ -1252,11 +1252,13 @@ endfunction
 
 function! s:move_cursor_to_col_text_end(col_idx)
   " move cursor to the end of text in a given table column
+  " always expects the cursor colnr to be 0
   call search(printf('^|\(.\{-}|\)\{%d} .\{-}\zs\s*|',  a:col_idx))
 endfunction
 
 function! s:move_cursor_to_col_text_start(col_idx)
   " move cursor to the start of text in a given table column
+  " always expects the cursor colnr to be 0
   call search(printf('^|\(.\{-}|\)\{%d} \zs', a:col_idx))
 endfunction
 

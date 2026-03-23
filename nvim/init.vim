@@ -53,6 +53,8 @@ function! s:config_vimwiki_mappings()
   nmap <buffer> - <Plug>VinegarUp
   " : auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
+  " fix conflict with pear-tree
+  inoremap <silent> <buffer> <BS> <Plug>(PearTreeBackspace)
 endfunction
 
 function! s:config_cpp_mappings()

@@ -449,41 +449,24 @@ augroup chrys_quickfix
 augroup END
 
 " markdown-specific configuration
-augroup chrys_ft_markdown
-  autocmd!
-
-  " disable line numbers
-  autocmd FileType markdown setlocal nonumber norelativenumber
-
-  " set textwidth for markdown
-  autocmd FileType markdown setlocal textwidth=80
-
-  " set conceallevel for markdown
-  autocmd FileType markdown setlocal conceallevel=2
+function! s:markdown_config()
+  " disable line numbers, textwidth:80, conceallevel:2, and set keyword
+  " program to define words with dictionary
+  setlocal nonumber norelativenumber
+  setlocal textwidth=80
+  setlocal conceallevel=2
+  setlocal keywordprg=:DefineConfirm
 
   " set table->plaintext decorators
-  autocmd FileType markdown let b:table_plain_before = "```\n"
-  autocmd FileType markdown let b:table_plain_after = "\n```"
+  let b:table_plain_before = "```\n"
+  let b:table_plain_after = "\n```"
+endfunction
 
-  " set keywordprg to define a word
-  autocmd FileType markdown setlocal keywordprg=:DefineConfirm
-augroup END
-
-" quickfix-specific
-augroup chrys_ft_qf
+augroup chrys_ft
   autocmd!
+  autocmd FileType markdown call s:markdown_config()
   autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
-augroup END
-
-" dictionary specific (for define buffers)
-augroup chrys_ft_dictionary
-  autocmd!
   autocmd FileType dictionary setlocal keywordprg=:DefineConfirm
-augroup END
-
-" reminder specific (for reminder files)
-augroup chrys_ft_reminder
-  autocmd!
   autocmd FileType reminder autocmd BufLeave <buffer> call SaveCurrentModifiedFile()
 augroup END
 
@@ -530,33 +513,41 @@ let g:vimwiki_key_mappings = {
 " disable emoji support
 let g:vimwiki_emoji_enable = 0
 
-augroup chrys_ft_vimwiki
-  autocmd!
+" disable auto write
+let g:vimwiki_autowriteall = 0
 
-  " set textwidth to 80
-  autocmd FileType vimwiki setlocal textwidth=80
+" enable auto-chdir
+let g:vimwiki_auto_chdir = 1
 
-  " include hyphens and apostrophes in words
-  autocmd FileType vimwiki setlocal iskeyword+=-,'
+function! s:vimwiki_config()
+  " textwidth:80, include hyphens and apostrophes in words, and set keyword
+  " program to define words with dictonary
+  setlocal textwidth=80
+  setlocal iskeyword+=-,'
+  setlocal keywordprg=:DefineConfirm
 
-  " Vcd change current directory to wiki root (vimwiki only)
-  autocmd FileType vimwiki command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
+  " fix conflict with pear-tree
+  let b:pear_tree_map_special_keys = 0
 
-  " TodayHeader jump to header with today's date (vimwiki only)
-  autocmd FileType vimwiki command! -buffer TodayHeader call search(printf('^#\+ %s', getreg('d')))
+  " set table-to-plaintext decorators
+  let b:table_plain_before = "```\n"
+  let b:table_plain_after = "\n```"
 
-  " fix conflicts with other plugins
-  autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
+  " add TodayHeader and Vcd commands
+  "   TODO check if Vcd can be removed
+  command! -buffer TodayHeader call search(printf('^#\+ %s', getreg('d')))
+  command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
 
-  " set table->plaintext decorators
-  autocmd FileType vimwiki let b:table_plain_before = "```\n"
-  autocmd FileType vimwiki let b:table_plain_after = "\n```"
-
-  " set keywordprg to define a word
-  autocmd FileType vimwiki setlocal keywordprg=:DefineConfirm
+  " delete deprecated VimwikiGenerateTags command
+  delcommand -buffer VimwikiGenerateTags
 
   " extend vimwiki syntax
-  autocmd FileType vimwiki syntax region VimwikiSourcable start=/^"\s/ end=/^finish$/
+  syntax region VimwikiSourcable start=/^"\s/ end=/^finish$/
+endfunction
+
+augroup chrys_ft_vimwiki
+  autocmd!
+  autocmd FileType vimwiki call s:vimwiki_config()
 augroup END
 
 let personal_wiki = {}
@@ -685,14 +676,13 @@ function! s:configure_onedark()
   highlight! User7 guifg=#98c379
 
   highlight! BoldTitle ctermfg=114 cterm=bold guifg=#98c379 gui=bold
-  highlight! BoldItalicTitle ctermfg=114 cterm=bold,italic guifg=#98c379 gui=bold,italic
 
   highlight! link VimwikiHeader1 BoldTitle
-  highlight! link VimwikiHeader2 BoldItalicTitle
-  highlight! link VimwikiHeader3 BoldItalicTitle
-  highlight! link VimwikiHeader4 BoldItalicTitle
-  highlight! link VimwikiHeader5 BoldItalicTitle
-  highlight! link VimwikiHeader6 BoldItalicTitle
+  highlight! link VimwikiHeader2 BoldTitle
+  highlight! link VimwikiHeader3 BoldTitle
+  highlight! link VimwikiHeader4 BoldTitle
+  highlight! link VimwikiHeader5 BoldTitle
+  highlight! link VimwikiHeader6 BoldTitle
 
   highlight! link VimwikiTag Comment
   highlight! link VimwikiSourcable Comment

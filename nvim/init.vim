@@ -2,118 +2,73 @@
 " Sources
 " =======
 source ~/.config/nvim/table.vim
-
-" ====================
-" table.vim Extensions
-" ====================
-let s:_table_imap_return = TableExposeFunction("imap_return")
-let s:_table_imap_backspace = TableExposeFunction("imap_backspace")
-let s:_table_nmap_o = TableExposeFunction("nmap_o")
-let s:_table_nmap_O = TableExposeFunction("nmap_O")
-
-function! s:table_imap_return()
-  return s:_table_imap_return()
-endfunction
-
-function! s:table_imap_backspace()
-  return s:_table_imap_backspace()
-endfunction
-
-function! s:table_nmap_o()
-  return s:_table_nmap_o()
-endfunction
-
-function! s:table_nmap_O()
-  return s:_table_nmap_O()
-endfunction
+source ~/.config/nvim/chrysline.vim
 
 " ===================
 " Remapping Functions
 " ===================
 function! s:config_vimwiki_mappings()
-  " Remap Ctrl-T to increase list indent for vimwiki
+  " Ctrl-T -> increase list indent
   imap <buffer> <C-T> <Plug>VimwikiIncreaseLvlSingleItem
-  " \wO to open vimwiki notes in split view
+  " \wO -> open vimwiki notes in split view
   nmap <buffer> <LocalLeader>wO <Plug>VimwikiSplitLink
-  " \wo to open vimwiki links in vertical split
+  " \wo -> open vimwiki links in vertical split
   nmap <buffer><silent> <LocalLeader>wo <Plug>VimwikiVSplitLink
-  " \wb to show backlinks
+  " \wb -> show backlinks
   nnoremap <buffer><silent> <LocalLeader>wb <CMD>VimwikiBacklinks<CR>
-  " \w<Space> to toggle todo list items
+  " \w<Space> -> toggle todo list items
   nnoremap <buffer><silent> <LocalLeader>w<Space> <CMD>VimwikiToggleListItem<CR>
-  " alias \w/ to VimwikiGoto
+  " alias \w/ -> VimwikiGoto
   nmap <buffer> <LocalLeader>w/ <CMD>VimwikiGoto<CR>
-  " create locations list for vimwiki table of contents, similar to help files
-  nnoremap <buffer><silent> gO <CMD>lvimgrep/^#/%<BAR>lopen<CR>
-  " Ctrl-I in visual mode to format selected text as italics
+  " Ctrl-I in visual mode -> format selected text as italics
   vnoremap <buffer> <C-I> c*<C-R>"*<C-[>
-  " Ctrl-B in visual mode to format selected text as bold
+  " Ctrl-B in visual mode -> format selected text as bold
   vnoremap <buffer> <C-B> c**<C-R>"**<C-[>
-  " - to normal function in vinegar; fix conflict
+  " - -> normal function in vinegar, fixes conflict
   nmap <buffer> - <Plug>VinegarUp
-  " : auto-insert tags
+  " : -> auto-insert tags
   inoremap <buffer><expr> : !search('\a\%#', 'bn') ? ':<C-X><C-O><C-P>' : ':'
-  " fix conflict with pear-tree
+  " Backspace -> trigger pear-tree backspace, fixes integration issue
   inoremap <silent> <buffer> <BS> <Plug>(PearTreeBackspace)
 endfunction
 
-function! s:config_cpp_mappings()
-  " remap gd to search for word under cursor in source files in directory
-  nnoremap <silent> <buffer> gd <CMD>vim/\<<C-R><C-W>\>/gj **/*.h **/*.cpp<BAR>copen<CR>
-  vnoremap <silent> <buffer> gd y<CMD>vim/\<<C-R>"\>/gj **/*.h **/*.cpp<BAR>copen<CR>
-endfunction
-
-function! s:config_netrw_mappings()
-  " P to close preview window
-  nnoremap <silent> <buffer> P <CMD>pclose<CR>
-  " warn on moving
-  nnoremap <silent> <buffer> mm <CMD>echoerr 'mm has been unmapped'<CR>
-endfunction
-
 function! s:config_telescope_mappings()
-  " \ee and Alt-e to pick a buffer
-  nnoremap <silent> <Leader>ee <CMD>Telescope buffers<CR>
+  " Alt-E -> pick a buffer
   nnoremap <silent> <M-e> <CMD>Telescope buffers<CR>
-  " \er to grep
+  " \er -> grep
   nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
-  " \et to pick a tag
+  " \et -> pick a tag
   nnoremap <silent> <Leader>et <CMD>Telescope tags<CR>
-  " \ep to list all builtin pickers
+  " \ep -> list all builtin pickers
   nnoremap <silent> <Leader>ep <CMD>Telescope builtin<CR>
-  " \ef to pick files
+  " \ef -> pick files
   nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
-  " \ec to pick a command from command history
+  " \ec -> pick a command from command history
   nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
-  " \em to pick a mark
+  " \em -> pick a mark
   nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
-  " \ez and Alt-f to fuzzy find in the current buffer
-  nnoremap <silent> <Leader>ez <CMD>Telescope current_buffer_fuzzy_find<CR>
+  " Alt-F -> fuzzy find in the current buffer
   nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
 endfunction
 
 function! s:config_leader_mappings()
-  " \s to toggle spell check
+  " \s -> toggle spell check
   nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
-  " \h to toggle highlighted search
+  " \h -> toggle highlighted search
   nmap <silent> <Leader>h <CMD>set hlsearch!<CR>
-  " \l to toggle colour line
+  " \l -> toggle colour line
   nmap <silent> <Leader>l <CMD>setl cul!<CR>
-  " \L to toggle visible whitespace
+  " \L -> toggle visible whitespace
   nnoremap <silent> <Leader>L <CMD>setl list!<CR>
-  " \z to toggle goyo mode
+  " \z -> toggle goyo mode
   nnoremap <silent> <Leader>z <CMD>Goyo<cr>
-  " \n to toggle line numbers
+  " \n -> toggle line numbers
   nnoremap <silent> <Leader>n <CMD>setl nu! rnu!<CR>
-  " \g to open fugitive buffer and Alt-G
-  nnoremap <silent> <expr> <Leader>g exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
-  nnoremap <silent> <expr> <M-g> exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
-  " \re to run ReadMode command
-  nnoremap <silent> <Leader>re <CMD>ReadMode<CR>
 endfunction
 
-" NOTE: alt window mappings were removed for an experiment
-
 function! s:config_bracket_swapping_mappings()
+  " Example: where | is the cursor position
+  "   |{ ... } --<\r(>--> |( ... )
   nnoremap <silent> <Leader>r( m'%r)`'r(
   nnoremap <silent> <Leader>r) m'%r)`'r(
   nnoremap <silent> <Leader>r[ m'%r]`'r[
@@ -123,23 +78,27 @@ function! s:config_bracket_swapping_mappings()
 endfunction
 
 function! s:config_misc_mappings()
-  " Ctrl-S to save current file in normal and insert mode
+  " Ctrl-S -> save current file if modified (normal and insert mode)
   nnoremap <silent> <C-S> <CMD>call SaveCurrentModifiedFile()<CR>
   imap <C-S> <C-O><C-S>
 
-  " Load and make view on F5 and Shift+F5 respectively
+  " F5 -> Load last saved view of current file
+  " Shift-F5 -> Save view of current file
   nnoremap <F5> <CMD>call SafeLoadView()<CR>
   nnoremap <F17> <CMD>mkview<BAR>echo 'Created view'<CR>
 
-  " Ctrl-Backspace to Ctrl-W in insert and command mode
+  " Ctrl-Backspace -> Delete word
   imap <C-H> <C-W>
   cmap <C-H> <C-W>
 
-  " Esc to escape terminal
+  " Escape terminal mode
   tmap <C-[> <C-\><C-N>
 
-  " Q to format paragraph without jumping
+  " Q -> format paragraph
   nnoremap Q gwap
+
+  " Alt-G -> open fugitive
+  nnoremap <silent> <expr> <M-g> exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
 endfunction
 
 function! s:config_command_keys()
@@ -161,538 +120,7 @@ call s:config_command_keys()
 augroup chrys_ft_mappings
   autocmd!
   autocmd FileType vimwiki call s:config_vimwiki_mappings()
-  autocmd FileType cpp call s:config_cpp_mappings()
-  autocmd FileType netrw call s:config_netrw_mappings()
-
-  " restore default backspace mapping for filetypes with pear-tree disabled
-  autocmd FileType TelescopePrompt inoremap <buffer> <BS> <BS>
 augroup END
-
-" =================
-" Tabline Functions
-" =================
-" s:highlight_if_modified
-function! s:highlight_if_modified(tabline)
-  return &modified ? '%#Italic#' .. a:tabline .. '%#TabLineFill#*' : a:tabline
-endfunction
-
-let g:tabline_defaults = {}
-
-" default tabline renderer
-function! g:tabline_defaults.renderer()
-  return ' ' .. s:highlight_if_modified('%f') .. ' %='
-endfunction
-
-" current directory renderer
-function! g:tabline_defaults.directory_detail()
-  return '%1* %{fnamemodify(getcwd(), '':t'')} %*'
-endfunction
-
-function! DirectoryButton(minwid, nclicks, button, mods)
-  top vnew .
-endfunction
-
-" current directory button
-function! g:tabline_defaults.directory_button()
-  return '%@DirectoryButton@%1* %{fnamemodify(getcwd(), '':t'')} %*%X'
-endfunction
-
-" tab pages renderer
-function! g:tabline_defaults.tab_page_detail()
-  return tabpagenr('$') > 1 ? '%1* %{tabpagenr()} / %{tabpagenr(''$'')} %*' : ''
-endfunction
-
-" tab pages buttons renderer
-function! g:tabline_defaults.tab_page_buttons()
-  let inactive_tab = "%%7*%%%dT %d %%T%%*"
-  let active_tab = "%%1* %d %%*"
-  let active_tabpagenr = tabpagenr()
-  let max_tabpagenr = tabpagenr('$')
-  if max_tabpagenr == 1
-    return ''
-  endif
-
-  let tab_pages = map(range(1, max_tabpagenr), {_,v -> printf(inactive_tab, v, v)})
-  let tab_pages[active_tabpagenr - 1] = printf(active_tab, active_tabpagenr)
-  return join(tab_pages, '')
-endfunction
-
-let g:status_lights = {}
-
-let g:status_lights.symbols = {
-      \ 'cursorline': '=',
-      \ 'digraph':    '~',
-      \ 'linebreak':  ']',
-      \ 'list':       '¶',
-      \ 'spell':      '¤',
-      \ 'wrap':       'W',
-      \ }
-
-" status lights symbols renderer
-function! g:status_lights.symbols_renderer()
-  let lights = ''
-  for [optname, symbol] in items(g:status_lights.symbols)
-    if eval('&' .. optname)
-      let lights ..= symbol
-    endif
-  endfor
-  return lights
-endfunction
-
-" status lights read mode renderer
-function! g:status_lights.readmode_renderer()
-  return exists("b:read_mode_restore_opts") ? 'READ' : ''
-endfunction
-
-" status lights table mode renderer
-function! g:status_lights.tablemode_renderer()
-  return exists("b:table_mode") ? 'TABLE' : ''
-endfunction
-
-augroup chrys_status_lights
-  " changing table mode updates statusline
-  autocmd User TableModeEnable let &ro = &ro
-  autocmd User TableModeDisable let &ro = &ro
-augroup END
-
-let g:status_lights.flags = {
-      \ 'virtualedit': ['ve', {val -> val != ''}],
-      \ 'colorcolumn': ['cc', {val -> val != ''}],
-      \ 'textwidth':   ['tw', {val -> val != 0}],
-      \ 'tabstop':     ['ts', {val -> val != 2}],
-      \ 'scrolloff':   ['so', {val -> val != 0 && val != 999}],
-      \ }
-
-" status lights flags renderer
-function! g:status_lights.flags_renderer()
-  let flags = []
-  for [optname, data] in items(g:status_lights.flags)
-    let [display, Cond] = data
-    let optval = eval('&'..optname)
-    if Cond(optval)
-      call add(flags, printf("%S=%d", display, optval))
-    endif
-  endfor
-  return flags->sort()->join(' ')
-endfunction
-
-" status lights filetype renderer
-function! g:status_lights.filetype_renderer()
-  return &filetype
-endfunction
-
-" status lights hlsearch renderer
-function! g:status_lights.hlsearch_renderer()
-  if ! &hlsearch
-    return ''
-  endif
-
-  let matches = matchbufline(bufnr(), @/, 1, '$')
-  let [_, lnum, byte, _] = getpos('.')
-  let counter = 0
-  for match in matches
-    if lnum < match.lnum
-      break
-    elseif lnum == match.lnum && byte < match.byteidx
-      break
-    else
-      let counter += 1
-    endif
-  endfor
-
-  return printf('/%s/[%d/%d]', @/, counter, len(matches))
-endfunction
-
-" status lights defaults
-let g:status_lights.default_lights = [
-      \ g:status_lights.filetype_renderer,
-      \ g:status_lights.readmode_renderer,
-      \ g:status_lights.tablemode_renderer,
-      \ g:status_lights.flags_renderer,
-      \ g:status_lights.symbols_renderer,
-      \ g:status_lights.hlsearch_renderer,
-      \ ]
-
-function! s:pad(text)
-  return len(a:text) > 0 ? a:text .. ' ' : ''
-endfunction
-
-" status lights combining renderer
-function! g:status_lights.big_renderer()
-  let lights = ''
-  let renderers = get(w:, "lights_renderers", g:status_lights.default_lights)
-  for Light_Renderer in renderers
-    let lights ..= s:pad(Light_Renderer())
-  endfor
-  return lights
-endfunction
-
-" status lights customisation
-let g:status_lights.known_lights = [
-      \ "filetype", "flags", "readmode", "tablemode", "symbols", "hlsearch"
-      \ ]
-
-" ConfigureLights(lights)
-" configure status lights for the current window
-"
-" lights should be a list of known names of lights, or a string containing
-" known names of lights separated by whitespace
-"
-" unknown names are ignored
-"
-" return 1 if any names were unknown for testing purposes, otherwise 0
-function! ConfigureLights(lights)
-  let lights = type(a:lights) == type('') ? split(a:lights) : a:lights
-  let lights_on = []
-  let renderers = []
-  for name in lights
-    if index(g:status_lights.known_lights, name) != -1
-      call add(lights_on, name)
-      call add(renderers, funcref("g:status_lights." .. name .. "_renderer", g:status_lights))
-    endif
-  endfor
-
-  let w:lights_on = lights_on
-  let w:lights_renderers = renderers
-  return len(renderers) != len(lights)
-endfunction
-
-" ResetLights()
-" reset status lights for the current window to the global default
-function! ResetLights()
-  unlet! w:lights_on w:lights_renderers
-endfunction
-
-" LightOn(light)
-" enable known light name in status lights for currrent window
-"
-" return 0 if light was enabled, otherwise 1
-function! LightOn(light)
-  if index(g:status_lights.known_lights, a:light) == -1
-    return 1
-  endif
-
-  if ! exists("w:lights_on")
-    let w:lights_on = copy(g:status_lights.known_lights)
-  endif
-
-  if index(w:lights_on, a:light) != -1
-    return 1
-  endif
-
-  call add(w:lights_on, a:light)
-  let w:lights_renderers = []
-  for name in w:lights_on
-    call add(w:lights_renderers, funcref("g:status_lights." .. name .. "_renderer", g:status_lights))
-  endfor
-  return 0
-endfunction
-
-" LightOff(light)
-" disable known light name in status lights for currrent window
-"
-" return 0 if light was disabled, otherwise 1
-function! LightOff(light)
-  if index(g:status_lights.known_lights, a:light) == -1
-    return 1
-  endif
-
-  if ! exists("w:lights_on")
-    let w:lights_on = copy(g:status_lights.known_lights)
-  endif
-
-  let index = index(w:lights_on, a:light)
-  if index == -1
-    return 1
-  endif
-
-  call remove(w:lights_on, index)
-  let w:lights_renderers = []
-  for name in w:lights_on
-    call add(w:lights_renderers, funcref("g:status_lights." .. name .. "_renderer", g:status_lights))
-  endfor
-  return 0
-endfunction
-
-" completion list helper function
-function! KnownLights(ArgLead, CmdLine, CursorPos)
-  return join(g:status_lights.known_lights, "\n")
-endfunction
-
-" use to define custom tablines for specific filetypes.
-"
-" The filetypes are used as keys in the dictionary and the values should be
-" funcrefs that accept no arguments and return a string representing the
-" custom tabline. This string can contain statusline fields, as the result is
-" evaluated again before being displayed. These functions should assume that
-" they are allowed to take up the maximum space possible using %= .
-let g:tabline_renderer = {}
-
-" netrw renderer
-function! g:tabline_renderer.netrw()
-  let tabline = ''
-
-  let cd = get(b:, 'netrw_curdir')
-  let tabline ..= ' ' .. cd
-
-  let target = netrw#Expose("netrwmftgt")
-  if target != 'n/a'
-    let tabline ..= ' (T %6*' .. target .. '%*)%='
-  else
-    let tabline ..= ' (T none)%='
-  endif
-  return tabline
-endfunction
-
-" help renderer
-" could be more intelligent to report the last help term that was searched
-" but this will do for now
-function! g:tabline_renderer.help()
-  let title = expand('%:t:r') "report the name of help file
-  return ' ' .. title .. '%='
-endfunction
-
-" TelescopePrompt renderer
-function! g:tabline_renderer.TelescopePrompt()
-  return '%='
-endfunction
-
-" s:tabline_strip_leading_zeroes
-function! s:tabline_strip_leading_zeroes(value)
-  return a:value =~ "^0" ? a:value[1:] : a:value
-endfunction
-
-" s:tabline_format_vimwiki_date
-function! s:tabline_format_vimwiki_date(date)
-  let year = a:date[0]
-  let month_nr = s:tabline_strip_leading_zeroes(a:date[1])
-  let month = vimwiki#vars#get_global('diary_months')->get(month_nr)
-  let day = s:tabline_strip_leading_zeroes(a:date[2])
-  return day .. ' ' .. month .. ' ' .. year
-endfunction
-
-" vimwiki renderer
-function! g:tabline_renderer.vimwiki()
-  let page = expand('%:t:r')
-  let buf_subdir = vimwiki#vars#get_bufferlocal('subdir')
-  let sub_path = substitute(buf_subdir, '\/\|\\', ' -> ', 'g')
-  let wikiname = vimwiki#vars#get_wikilocal('name')
-  if wikiname == ''
-    let wikiname = vimwiki#vars#get_wikilocal('path')
-  endif
-
-  let diary_subdir = vimwiki#vars#get_wikilocal('diary_rel_path')
-  let diary_index = vimwiki#vars#get_wikilocal('diary_index')
-  let index = vimwiki#vars#get_wikilocal('index')
-
-  let tabline = ' ' .. wikiname
-  if buf_subdir == diary_subdir && page == diary_index
-    let tabline ..= ' Diary'
-
-  elseif buf_subdir == diary_subdir
-    let tabline ..= ' Diary: '
-    let tabline ..= s:tabline_format_vimwiki_date(page->split('-'))
-
-  elseif page == index
-    let tabline = tabline
-
-  else
-    let page = substitute(page, '_', ' ', 'g')
-    let tabline ..= ' -> ' .. sub_path .. page
-  endif
-
-  return s:highlight_if_modified(tabline) .. '%='
-endfunction
-
-function! s:check_trailing_space(bufnr)
-  if getbufvar(a:bufnr, "statusline_no_trailing", 0)
-    call setbufvar(a:bufnr, "statusline_trailing_linenr", 0)
-    return
-  endif
-
-  let matches = matchbufline(a:bufnr, '\s\+$', 1, '$')
-  if empty(matches)
-    call setbufvar(a:bufnr, "statusline_trailing_linenr", 0)
-  else
-    call setbufvar(a:bufnr, "statusline_trailing_linenr", matches[0].lnum)
-  endif
-  " update the statusline (see CursorHold docs)
-  let &ro = &ro
-endfunction
-
-function! s:check_branch_state(bufnr)
-  let git_dir = FugitiveGitDir(a:bufnr)
-  if empty(git_dir)
-    return
-  endif
-
-  let state_info = getbufvar(a:bufnr, "statusline_branch", {})
-  if empty(state_info)
-    let state_info.branch_name = FugitiveHead(10, a:bufnr)
-    let state_info.git_dir = git_dir
-    let state_info.dirty = 0
-    call setbufvar(a:bufnr, "statusline_branch", state_info)
-  endif
-
-  let branch_status = FugitiveExecute(["status", "--porcelain"], a:bufnr)
-  let state_info.dirty = len(branch_status.stdout) > 1
-  let &ro = &ro
-endfunction
-
-function! s:check_tabs(bufnr)
-  if getbufvar(a:bufnr, "statusline_no_tabs", 0)
-    call setbufvar(a:bufnr, "statusline_bad_tab", {})
-    return
-  endif
-
-  let tab_matches = matchbufline(a:bufnr, '\t', 1, '$')
-  if len(tab_matches) == 0
-    call setbufvar(a:bufnr, "statusline_bad_tab", {})
-  else
-    call setbufvar(a:bufnr, "statusline_bad_tab", tab_matches[0])
-  endif
-  let &ro = &ro
-endfunction
-
-augroup chrys_statusline
-  autocmd!
-  " check for trailing spaces in buffer
-  autocmd CursorHold * call s:check_trailing_space(bufnr())
-  autocmd BufReadPost * call s:check_trailing_space(bufnr())
-  autocmd BufEnter * call s:check_trailing_space(bufnr())
-  autocmd BufWritePost * call s:check_trailing_space(bufnr())
-
-  " check for branch information
-  autocmd CursorHold * call s:check_branch_state(bufnr())
-  autocmd BufReadPost * call s:check_branch_state(bufnr())
-  autocmd BufEnter * call s:check_branch_state(bufnr())
-  autocmd BufWritePost * call s:check_branch_state(bufnr())
-
-  " check for trailing spaces in buffer
-  autocmd CursorHold * call s:check_tabs(bufnr())
-  autocmd BufReadPost * call s:check_tabs(bufnr())
-  autocmd BufEnter * call s:check_tabs(bufnr())
-  autocmd BufWritePost * call s:check_tabs(bufnr())
-
-  " filetypes for displaying wordcount
-  autocmd FileType text,markdown,help,vimwiki let b:statusline_wordcount = 1
-augroup END
-
-let g:statusline_fns = {}
-
-function! g:statusline_fns.trailing()
-  let trailing_linenr = get(b:, "statusline_trailing_linenr", 0)
-  if trailing_linenr
-    return '!\s$ ' .. trailing_linenr
-  else
-    return ''
-  endif
-endfunction
-
-function! g:statusline_fns.wordcount()
-  if ! get(b:, "statusline_wordcount", 0)
-    return ''
-  endif
-
-  let info = wordcount()
-  if has_key(info, 'visual_words')
-    let words = info.visual_words
-  else
-    let words = info.words
-  endif
-  return '%3*' .. Pprint_number(words) .. '%1* words '
-endfunction
-
-function! g:statusline_fns.branch()
-  let state_info = get(b:, "statusline_branch", {})
-  if empty(state_info)
-    return ''
-  elseif state_info.dirty
-    return printf("(%s!)", state_info.branch_name)
-  else
-    return printf("(%s)", state_info.branch_name)
-  endif
-endfunction
-
-function! g:statusline_fns.bad_tabs()
-  if &filetype == 'help'
-    return ''
-  elseif ! get(b:, "do_warn_tabs", get(g:, "do_warn_tabs", 1))
-    return ''
-  elseif ! exists("b:statusline_bad_tab")
-    return ''
-  elseif empty(b:statusline_bad_tab)
-    return ''
-  else
-    let lnum = b:statusline_bad_tab.lnum
-    return '!\t ' .. lnum
-  endif
-endfunction
-
-function! s:pad_warning_highlight(text)
-  return len(a:text) > 0 ? '%5* ' .. a:text .. ' %*' : ''
-endfunction
-
-function! g:statusline_fns.warnings()
-  let warnings = []
-  call add(warnings, g:statusline_fns.trailing())
-  call add(warnings, g:statusline_fns.bad_tabs())
-
-  let result = join(filter(warnings, "len(v:val) > 0"))
-  return s:pad_warning_highlight(result)
-endfunction
-
-" CustomStatusline
-function! CustomStatusline()
-  let statusline = ' '
-  let statusline ..= '%*%<'
-  let statusline ..= s:highlight_if_modified('%f') .. ' '
-  let statusline ..= '%{%g:statusline_fns.branch()%}'
-  let statusline ..= '%='
-  let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
-  let statusline ..= '%1* '
-  let statusline ..= '%{%g:statusline_fns.wordcount()%}'
-  let statusline ..= 'L %3*%l%1*/%L C %3*%v%1* %p%% %*'
-  let statusline ..= '%{%g:statusline_fns.warnings()%}'
-  return statusline
-endfunction
-
-" QuickfixStatusline
-function! QuickfixStatusline()
-  "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''} %=%-15(%l,%c%V%) %P
-  let statusline = ' '
-  let statusline ..= "%*%<%t %{exists('w:quickfix_title') ? w:quickfix_title : ''}"
-  let statusline ..= '%='
-  let statusline ..= '%2*%{&filetype}%* '
-  let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
-  let statusline ..= '%1* '
-  let statusline ..= 'L %3*%l%1*/%L C %3*%c%1* %p%% '
-  return statusline
-endfunction
-
-function! s:get_tabline_renderer(ft)
-  if has_key(g:tabline_renderer, a:ft)
-    return 'g:tabline_renderer.' .. a:ft
-  else
-    return 'g:tabline_defaults.renderer'
-  endif
-endfunction
-
-" CustomTabline
-function! CustomTabline()
-  let renderer = s:get_tabline_renderer(&filetype)
-  let tabline = ''
-  let tabline ..= '%{%g:tabline_defaults.directory_button()%}'
-  let tabline ..= '%{%'..renderer..'()%}'
-  let tabline ..= '%{%g:tabline_defaults.tab_page_buttons()%}'
-  return tabline
-endfunction
-
-" GoyoTabline
-function! GoyoTabline()
-  let renderer = s:get_tabline_renderer(&filetype)
-  return '%=%{%'..renderer..'()%}'
-endfunction
 
 " =========
 " Functions
@@ -920,46 +348,6 @@ function! s:define_word_confirm(word) abort
   call s:define_word(a:word)
 endfunction
 
-function! s:add_mapping_if_buffer_local(dict, key, mapping)
-  if empty(a:mapping)
-    return
-  elseif a:mapping.buffer
-    let a:dict[a:key] = a:mapping
-  endif
-endfunction
-
-function! s:restore_mapping_if_exists(dict, key)
-  let mapping = get(a:dict, a:key, {})
-  if !empty(mapping)
-    call mapset(mapping)
-  endif
-endfunction
-
-function! s:get_mapping(lhs, mode)
-  return maparg(a:lhs, a:mode, v:false, v:true)
-endfunction
-
-function! s:toggle_read_mode() abort
-  let restore_opts = get(b:, "read_mode_restore_opts", {})
-  if empty(restore_opts)
-    let restore_opts = {}
-    let restore_opts.timestamp = localtime()
-    call s:add_mapping_if_buffer_local(restore_opts, "j_nmap", s:get_mapping('j', 'n'))
-    call s:add_mapping_if_buffer_local(restore_opts, "k_nmap", s:get_mapping('k', 'n'))
-    nnoremap <silent> <buffer> j <C-D>
-    nnoremap <silent> <buffer> k <C-U>
-    let b:read_mode_restore_opts = restore_opts
-    let &ro = &ro " update statusline
-  else
-    unmap <buffer> j
-    unmap <buffer> k
-    call s:restore_mapping_if_exists(restore_opts, 'j_nmap')
-    call s:restore_mapping_if_exists(restore_opts, 'k_nmap')
-    unlet b:read_mode_restore_opts
-    let &ro = &ro " update statusline
-  endif
-endfunction
-
 " ========
 " Commands
 " ========
@@ -985,43 +373,6 @@ command! UndoLastClose call UndoLastClose()
 " Scratch
 "   create a temporary scratch buffer
 command! Scratch new +set\ bt=nofile
-
-" ReadMode
-"   toggle mode for using j and k for easy reading
-command! ReadMode call <SID>toggle_read_mode()
-
-" ConfigureLights
-"   configure status lights for the current window
-command! -complete=custom,KnownLights -nargs=1 ConfigureLights
-      \ if ConfigureLights('<args>')  |
-      \   echohl ErrorMsg             |
-      \   echomsg "Unknown lights"    |
-      \   echohl None                 |
-      \ endif
-
-" ResetLights
-"   reset status lights for the current window
-command! ResetLights
-      \ call ResetLights()              |
-      \ echo "Lights have been reset!"
-
-" LightOn
-"   turn light on in status lights for current window
-command! -complete=custom,KnownLights -nargs=1 LightOn
-      \ if LightOn('<args>')      |
-      \   echohl ErrorMsg         |
-      \   echomsg "Unknown light" |
-      \   echohl None             |
-      \ endif
-
-" LightOff
-"   turn light off in status lights for current window
-command! -complete=custom,KnownLights -nargs=1 LightOff
-      \ if LightOff('<args>')     |
-      \   echohl ErrorMsg         |
-      \   echomsg "Unknown light" |
-      \   echohl None             |
-      \ endif
 
 " HideTabline
 "   command to hide the tabline, When [!] is specified, it restores the
@@ -1179,9 +530,6 @@ let g:vimwiki_key_mappings = {
 augroup chrys_ft_vimwiki
   autocmd!
 
-  " disable line numbers
-  autocmd FileType vimwiki setlocal nonumber norelativenumber textwidth=80
-
   " set textwidth to 80
   autocmd FileType vimwiki setlocal textwidth=80
 
@@ -1191,14 +539,10 @@ augroup chrys_ft_vimwiki
   " Vcd change current directory to wiki root (vimwiki only)
   autocmd FileType vimwiki command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
 
-  " auto update last modified date text
-  "autocmd FileType vimwiki autocmd BufWrite <buffer> call UpdateModifiedDate('\clast updated\?:', printf(" %S", getreg('d')))
-
   " TodayHeader jump to header with today's date (vimwiki only)
   autocmd FileType vimwiki command! -buffer TodayHeader call search(printf('^#\+ %s', getreg('d')))
 
   " fix conflicts with other plugins
-  autocmd FileType vimwiki let b:coc_suggest_disable = 1
   autocmd FileType vimwiki let b:pear_tree_map_special_keys = 0
 
   " set table->plaintext decorators
@@ -1283,7 +627,7 @@ let g:goyo_width = 85
 " configure display during goyo
 function! s:goyo_enter()
   set showtabline=2
-  set tabline=%!GoyoTabline()
+  set tabline=%!FocusTabline()
 endfunction
 
 function! s:goyo_leave()

@@ -516,9 +516,6 @@ let g:vimwiki_emoji_enable = 0
 " disable auto write
 let g:vimwiki_autowriteall = 0
 
-" enable auto-chdir
-let g:vimwiki_auto_chdir = 1
-
 function! s:vimwiki_config()
   " textwidth:80, include hyphens and apostrophes in words, and set keyword
   " program to define words with dictonary
@@ -539,7 +536,9 @@ function! s:vimwiki_config()
   command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
 
   " delete deprecated VimwikiGenerateTags command
-  delcommand -buffer VimwikiGenerateTags
+  if exists(":VimwikiGenerateTags") == 2
+    delcommand -buffer VimwikiGenerateTags
+  endif
 
   " extend vimwiki syntax
   syntax region VimwikiSourcable start=/^"\s/ end=/^finish$/
@@ -686,10 +685,11 @@ function! s:configure_onedark()
 
   highlight! link VimwikiTag Comment
   highlight! link VimwikiSourcable Comment
+  highlight! link TodoDate String
+  highlight! link Vimwikilist String
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()
 
-set termguicolors
 colorscheme onedark
 

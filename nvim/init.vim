@@ -527,6 +527,9 @@ let g:vimwiki_key_mappings = {
       \ 'table_mappings': 0,
       \ }
 
+" disable emoji support
+let g:vimwiki_emoji_enable = 0
+
 augroup chrys_ft_vimwiki
   autocmd!
 
@@ -551,6 +554,9 @@ augroup chrys_ft_vimwiki
 
   " set keywordprg to define a word
   autocmd FileType vimwiki setlocal keywordprg=:DefineConfirm
+
+  " extend vimwiki syntax
+  autocmd FileType vimwiki syntax region VimwikiSourcable start=/^"\s/ end=/^finish$/
 augroup END
 
 let personal_wiki = {}
@@ -649,9 +655,9 @@ function! s:configure_onedark()
   let g:onedark_terminal_italics = 1
 
   " onedark comment highlighting is too dark for my taste
-  call onedark#extend_highlight("Comment", { "fg" : { "gui" : "#7C828C" } })
+  call onedark#set_highlight("Comment", { "fg": { "gui": "#7C828C", "cterm": "1" } })
   " add better contrast for listchars (currently same as comment)
-  call onedark#set_highlight("Whitespace", { "fg" : { "gui" : "#7c828C", "cterm" : "0", "cterm16": "0" } })
+  call onedark#set_highlight("Whitespace", { "fg": { "gui": "#7C828C", "cterm": "1" } })
   " better contrast for cursor line highlighting
   call onedark#extend_highlight("CursorLine", { "bg" : { "gui" : "#48505E" } })
 
@@ -677,6 +683,19 @@ function! s:configure_onedark()
   highlight! User5 guifg=#282c34 guibg=#e06c75
   highlight! User6 guifg=#98c379
   highlight! User7 guifg=#98c379
+
+  highlight! BoldTitle ctermfg=114 cterm=bold guifg=#98c379 gui=bold
+  highlight! BoldItalicTitle ctermfg=114 cterm=bold,italic guifg=#98c379 gui=bold,italic
+
+  highlight! link VimwikiHeader1 BoldTitle
+  highlight! link VimwikiHeader2 BoldItalicTitle
+  highlight! link VimwikiHeader3 BoldItalicTitle
+  highlight! link VimwikiHeader4 BoldItalicTitle
+  highlight! link VimwikiHeader5 BoldItalicTitle
+  highlight! link VimwikiHeader6 BoldItalicTitle
+
+  highlight! link VimwikiTag Comment
+  highlight! link VimwikiSourcable Comment
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()

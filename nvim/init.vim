@@ -406,6 +406,9 @@ set number
 set relativenumber
 set sidescroll=0
 
+" disable intro message
+set shortmess+=I
+
 " set custom statusline and tabline
 set laststatus=3
 set statusline=%!CustomStatusline()

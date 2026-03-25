@@ -606,17 +606,20 @@ let g:pear_tree_repeatable_expand = 0
 
 " map i_Ctrl-Backspace to backspace
 " map i_Ctrl-Q to select horizontal
-lua require("telescope").setup{
-      \ defaults = {
-      \   mappings = {
-      \     i = {
-      \       ["<C-_>"] = function()
-      \         vim.cmd [[normal! bcw]]
-      \       end,
-      \       ["<C-Q>"] = require("telescope.actions").select_vertical,
-      \     }
-      \   }
-      \ }}
+lua <<
+require("telescope").setup{
+  defaults = {
+      mappings = {
+          i = {
+              ["<C-_>"] = function()
+                vim.cmd [[normal! bcw]]
+              end,
+              ["<C-Q>"] = require("telescope.actions").select_vertical,
+            }
+        }
+    }
+}
+.
 
 " ====
 " Goyo

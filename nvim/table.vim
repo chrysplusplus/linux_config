@@ -226,6 +226,14 @@
 "
 " Defaults to 0
 "
+" Customisation Variable: g:table_mode_concealcursor
+"
+" This is the value to which the 'concealcursor' option of the window is set
+" to when entering table mode. See the help for 'concealcursor' for more
+" information on valid values.
+"
+" Defaults to "nc"
+"
 " TODO: Document autocmd hooks
 
 " ================
@@ -2214,6 +2222,10 @@ function! s:highlight()
 
     call add(ids, s:conceal_match_with_char('\(|\|-\)\@<=-\(|\|-\)\@=', '─'))
     let w:table_mode_hlmatches = ids
+
+    let cocu = get(g:, "table_mode_concealcursor", "nc")
+    let b:table_mode_restore_concealcursor = &concealcursor
+    let &concealcursor = cocu
   endif
 endfunction
 
@@ -2225,6 +2237,9 @@ function! s:no_highlight()
       call matchdelete(match_id)
     endfor
     unlet w:table_mode_hlmatches
+
+    let &concealcursor = b:table_mode_restore_concealcursor
+    unlet b:table_mode_restore_concealcursor
   endif
 endfunction
 

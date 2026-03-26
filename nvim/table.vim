@@ -1975,6 +1975,7 @@ function! s:au_table_mode_enable()
   call s:text_object_key_mappings()
   call s:nav_key_mappings()
   call s:commands()
+  call s:highlight()
 endfunction
 
 function! s:au_table_mode_disable()
@@ -1987,6 +1988,7 @@ function! s:au_table_mode_disable()
   call s:no_text_object_key_mappings()
   call s:no_nav_key_mappings()
   call s:no_commands()
+  call s:no_highlight()
 endfunction
 
 augroup table_mode
@@ -2164,6 +2166,41 @@ function! s:no_commands()
 endfunction
 
 command! TableMode call <SID>table_mode_toggle()
+
+" ============
+" Highlighting
+" ============
+
+function! s:conceal_match_with_char(pattern, char, priority = 10) "-> Number
+  " return id of new conceal-highlight match
+  return matchadd("Conceal", a:pattern, a:priority, -1, { "conceal": a:char })
+endfunction
+
+function! s:highlight()
+  if ! get(g:, "table_inhibit_table_highlighting", 0)
+    let ids = []
+    call add(ids, s:conceal_match_with_char('-\zs|\ze-', '┼'))
+    call add(ids, s:conceal_match_with_char('^|\ze-',    '├'))
+    call add(ids, s:conceal_match_with_char('-\zs|$',    '┤'))
+    call add(ids, s:conceal_match_with_char(' \zs|\ze ', '│'))
+    call add(ids, s:conceal_match_with_char('^|\ze ',    '│'))
+    call add(ids, s:conceal_match_with_char(' \zs|$',    '│'))
+
+    call add(ids, s:conceal_match_with_char('\(|\|-\)\@<=-\(|\|-\)\@=', '─'))
+    let w:table_mode_hlmatches = ids
+  endif
+endfunction
+
+function! s:no_highlight()
+  if ! get(g:, "table_inhibit_table_highlighting", 0)
+    let ids = get(w:, "table_mode_hlmatches", [])
+    if empty(ids) | return | endif
+    for match_id in ids
+      call matchdelete(match_id)
+    endfor
+    unlet w:table_mode_hlmatches
+  endif
+endfunction
 
 " ==========
 " Extensions

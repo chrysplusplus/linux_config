@@ -200,6 +200,32 @@
 "
 " Defaults to ""
 "
+" Customisation Variable: g:table_inhibit_mode_toggle_key
+"
+" If non-zero, the script will not map the default mode toggle key, which is
+" `t<CR>`. Set this value to 1 to override the default behavour and define
+" your own mapping. For example:
+"
+" :let g:table_inhibit_mode_toggle_key = 1
+" :runtime table.vim " or source script directly
+" :nnoremap <silent> <Leader>T <CMD>TableMode<CR>
+"
+" This will map <Leader>T to run the TableMode command, which toggles the
+" mode. By default this mapping is `\T`, but the value of <Leader> can be
+" changed by setting the g:mapleader variable.
+"
+" Note: This variable needs to be set _before_ this script is executed,
+" otherwise the default mapping will be used regardless.
+"
+" Defaults to 0
+"
+" Customisation Variable: g:table_inhibit_table_highlighting
+"
+" If non-zero, the script will not highlight tables when table mode is
+" enabled.
+"
+" Defaults to 0
+"
 " TODO: Document autocmd hooks
 
 " ================

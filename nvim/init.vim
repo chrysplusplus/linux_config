@@ -533,9 +533,7 @@ function! s:vimwiki_config()
   let b:table_plain_before = "```\n"
   let b:table_plain_after = "\n```"
 
-  " add TodayHeader and Vcd commands
-  "   TODO check if Vcd can be removed
-  command! -buffer TodayHeader call search(printf('^#\+ %s', getreg('d')))
+  " add Vcd command
   command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
 
   " delete deprecated VimwikiGenerateTags command

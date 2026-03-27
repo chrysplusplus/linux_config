@@ -687,6 +687,7 @@ function! s:configure_onedark()
   highlight! link VimwikiHeader4 BoldTitle
   highlight! link VimwikiHeader5 BoldTitle
   highlight! link VimwikiHeader6 BoldTitle
+  highlight! link VimwikiHeaderChar Comment
 
   highlight! link VimwikiTag Comment
   highlight! link VimwikiSourcable Comment

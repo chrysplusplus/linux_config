@@ -629,11 +629,13 @@ let g:goyo_width = 85
 " configure display during goyo
 function! s:goyo_enter()
   set showtabline=2
+  set cmdheight=0
   set tabline=%!FocusTabline()
 endfunction
 
 function! s:goyo_leave()
   set showtabline=2
+  set cmdheight=1
   set tabline=%!CustomTabline()
 endfunction
 

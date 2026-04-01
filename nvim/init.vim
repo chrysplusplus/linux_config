@@ -465,12 +465,25 @@ function! s:markdown_config()
   let b:table_plain_after = "\n```"
 endfunction
 
+" reminder-specific configuration
+function! s:reminder_config()
+  if get(b:, "reminder_autosave_done", 0)
+    " avoid setting autocmd for this buffer twice!
+    return
+  endif
+  " set up augroup for autosaving the buffer
+  augroup chrys_reminder_autosave
+    autocmd BufLeave <buffer> call SaveCurrentModifiedFile()
+  augroup END
+  let b:reminder_autosave_done = 1
+endfunction
+
 augroup chrys_ft
   autocmd!
   autocmd FileType markdown call s:markdown_config()
   autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
   autocmd FileType dictionary setlocal keywordprg=:DefineConfirm
-  autocmd FileType reminder autocmd BufLeave <buffer> call SaveCurrentModifiedFile()
+  autocmd FileType reminder call s:reminder_config()
 augroup END
 
 " =======

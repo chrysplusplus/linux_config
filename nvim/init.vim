@@ -96,9 +96,6 @@ function! s:config_misc_mappings()
 
   " Q -> format paragraph
   nnoremap Q gwap
-
-  " Alt-G -> open fugitive
-  nnoremap <silent> <expr> <M-g> exists('g:loaded_fugitive') ? '<CMD>Git<CR>' : ''
 endfunction
 
 function! s:config_command_keys()

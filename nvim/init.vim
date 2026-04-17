@@ -345,6 +345,14 @@ function! s:define_word_confirm(word) abort
   call s:define_word(a:word)
 endfunction
 
+let s:compile_macro = "\<C-W>b\"=get(g:,'compile_cmd','')\<C-M>pa\<C-M>\<C-[>\<C-W>p"
+
+function! s:edit_compile_command()
+  call inputsave()
+  let g:compile_cmd = input("Compile command: ", get(g:, "compile_cmd", ""))
+  call inputrestore()
+endfunction
+
 " ========
 " Commands
 " ========
@@ -392,6 +400,16 @@ command! -nargs=1 DefineConfirm call <SID>define_word_confirm('<args>')
 " Dict
 "   read result of dict command into new buffer
 command! -nargs=1 Dict call <SID>call_dict('<args>')
+
+command! -register SetCommandMacro
+  \ if empty('<reg>')                                    |
+  \   echoerr "Provide a register for the macro"         |
+  \ else                                                 |
+  \   call setreg('<reg>', s:compile_macro)              |
+  \   echomsg "Set \"" .. '<reg>' .. " as compile macro" |
+  \ endif
+
+command! CompileCommand call <SID>edit_compile_command()
 
 " =================
 " Vim Configuration

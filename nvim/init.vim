@@ -401,6 +401,8 @@ command! -nargs=1 DefineConfirm call <SID>define_word_confirm('<args>')
 "   read result of dict command into new buffer
 command! -nargs=1 Dict call <SID>call_dict('<args>')
 
+" SetCommandMacro
+"   set the contents of the register to run the compile command
 command! -register SetCommandMacro
   \ if empty('<reg>')                                    |
   \   echoerr "Provide a register for the macro"         |
@@ -409,7 +411,16 @@ command! -register SetCommandMacro
   \   echomsg "Set \"" .. '<reg>' .. " as compile macro" |
   \ endif
 
+" CompileCommand
+"   set the global compile command
 command! CompileCommand call <SID>edit_compile_command()
+
+" Reminder
+"   edit the reminder file if it exists and correct perms
+let s:reminder_path = resolve(expand('~/REMINDER'))
+if filereadable(s:reminder_path) && filewritable(s:reminder_path)
+  command! Reminder new ~/REMINDER
+endif
 
 " =================
 " Vim Configuration

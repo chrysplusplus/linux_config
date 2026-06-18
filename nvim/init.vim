@@ -691,7 +691,7 @@ function! s:configure_onedark()
   " add better contrast for listchars (currently same as comment)
   call onedark#set_highlight("Whitespace", { "fg": { "gui": "#7C828C", "cterm": "1" } })
   " better contrast for cursor line highlighting
-  call onedark#extend_highlight("CursorLine", { "bg" : { "gui" : "#48505E" } })
+  call onedark#extend_highlight("CursorLine", { "bg" : { "gui" : "#1c1e22" } })
 
   highlight! link netrwMarkFile PmenuSel
   highlight! SpecialKey guifg=#505762

@@ -732,6 +732,8 @@ function! s:configure_onedark()
   highlight! link Vimwikilist String
 
   highlight! link StatusLineNC StatusLine
+  highlight! link StatusLineTerm StatusLine
+  highlight! link StatusLineTermNC StatusLine
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()

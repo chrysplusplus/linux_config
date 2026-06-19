@@ -436,7 +436,7 @@ set sidescroll=0
 set shortmess+=I
 
 " set custom statusline and tabline
-set laststatus=3
+set laststatus=2
 set statusline=%!CustomStatusline()
 set showtabline=2
 set tabline=%!CustomTabline()
@@ -730,6 +730,8 @@ function! s:configure_onedark()
   highlight! link VimwikiSourcable Comment
   highlight! link TodoDate String
   highlight! link Vimwikilist String
+
+  highlight! link StatusLineNC StatusLine
 endfunction
 
 autocmd ColorScheme onedark call <SID>configure_onedark()

@@ -353,6 +353,18 @@ function! s:edit_compile_command()
   call inputrestore()
 endfunction
 
+function! s:open_terminal()
+  call inputsave()
+  let term_cmd = input("Terminal (defaults to `bash`): ")
+  call inputrestore()
+
+  if len(term_cmd) == 0
+    let term_cmd = "bash"
+  endif
+
+  execute "new" "term://"..term_cmd
+endfunction
+
 " ========
 " Commands
 " ========
@@ -421,6 +433,9 @@ let s:reminder_path = resolve(expand('~/REMINDER'))
 if filereadable(s:reminder_path) && filewritable(s:reminder_path)
   command! Reminder new ~/REMINDER
 endif
+
+" Terminal
+command! Terminal call <SID>open_terminal()
 
 " =================
 " Vim Configuration
@@ -550,6 +565,7 @@ let g:vimwiki_table_auto_fmt = 0
 let g:vimwiki_key_mappings = {
       \ 'table_format': 0,
       \ 'table_mappings': 0,
+      \ 'mouse': 1,
       \ }
 
 " disable emoji support

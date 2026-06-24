@@ -304,7 +304,7 @@ endfunction
 " ===========================
 
 let g:status_lights.known_lights = [
-      \ "filetype", "flags", "readmode", "tablemode", "symbols", "hlsearch"
+      \ "filetype", "flags", "tablemode", "symbols", "hlsearch"
       \ ]
 
 " ConfigureLights(lights)

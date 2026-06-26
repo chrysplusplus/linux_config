@@ -365,6 +365,12 @@ function! s:open_terminal()
   execute "new" "term://"..term_cmd
 endfunction
 
+function! s:half_window()
+  setlocal wrap linebreak statusline=%f
+  let width = &tw / 2
+  execute width "wincmd" "|"
+endfunction
+
 " ========
 " Commands
 " ========
@@ -436,6 +442,9 @@ endif
 
 " Terminal
 command! Terminal call <SID>open_terminal()
+
+" HalfWindow
+command! HalfWindow call <SID>half_window()
 
 " =================
 " Vim Configuration

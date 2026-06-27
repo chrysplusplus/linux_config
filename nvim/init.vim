@@ -371,6 +371,36 @@ function! s:half_window()
   execute width "wincmd" "|"
 endfunction
 
+function! s:ddgr()
+  if ! executable("ddgr")
+    echoerr "You do not have ddgr installed"
+    return
+  endif
+
+  new term://ddgr
+  setlocal filetype=ddgr cursorline
+  nnoremap <buffer> <silent> h <NOP>
+  nnoremap <buffer> <silent> j <CMD>call search('^\s\d\<bar>^ddgr', 'W')<CR>
+  nnoremap <buffer> <silent> k <CMD>call search('^\s\d\<bar>^ddgr', 'Wb')<CR>
+  nnoremap <buffer> <silent> l <NOP>
+  nnoremap <buffer> <silent> <CR> <CMD>call <SID>ddgr_enter()<CR>
+  nnoremap <buffer> <silent> q <CMD>call feedkeys("i\<C-D>")<CR>
+
+  tnoremap <buffer> <silent> <CR> <CR><C-\><C-N>
+
+  startinsert
+endfunction
+
+function! s:ddgr_enter()
+  let linenr = search('^\s\d', 'bWc')
+  if linenr == 0
+    return
+  endif
+
+  let index = matchstr(getline(linenr), '\d\+')
+  call feedkeys("m'i"..index.."\<CR>\<Esc>`'")
+endfunction
+
 " ========
 " Commands
 " ========
@@ -445,6 +475,9 @@ command! Terminal call <SID>open_terminal()
 
 " HalfWindow
 command! HalfWindow call <SID>half_window()
+
+" DDGR
+command! DDGR call <SID>ddgr()
 
 " =================
 " Vim Configuration

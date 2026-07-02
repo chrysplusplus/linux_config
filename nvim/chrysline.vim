@@ -6,7 +6,7 @@
 function! CustomStatusline()
   let statusline = ' '
   let statusline ..= '%*%<'
-  let statusline ..= s:highlight_if_modified('%f') .. ' '
+  let statusline ..= '%{%g:statusline_fns.highlight_if_modified(''%f'')%} '
   let statusline ..= '%{%g:statusline_fns.branch()%}'
   let statusline ..= '%='
   let statusline ..= '%2*%{%g:status_lights.big_renderer()%}%*'
@@ -540,6 +540,10 @@ function! g:statusline_fns.warnings() "-> String"
 
   let result = join(filter(warnings, "len(v:val) > 0"))
   return s:pad_warning_highlight(result)
+endfunction
+
+function! g:statusline_fns.highlight_if_modified(tabline) " -> String"
+  return s:highlight_if_modified(a:tabline)
 endfunction
 
 " =========

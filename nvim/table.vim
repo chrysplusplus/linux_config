@@ -94,7 +94,7 @@
 " Going on from here, you can insert rows and columns using the InsertRow and
 " InsertColumn commands respectively. The ResizeTableColumn command can be
 " used to change the width of columns in the table, but you can also edit the
-" first of the table to achieve the same effect.
+" first separator line of the table to achieve the same effect.
 "
 " Happy writing!
 "
@@ -178,7 +178,7 @@
 "
 " My main reason for this change in behaviour was because I use these commands
 " to read through my tables, and it was pretty frustrating having to
-" left-brace my way to the beginning. Nore that <Leader>ti exists to enter
+" left-brace my way to the beginning. Note that <Leader>ti exists to enter
 " insert mode at the end of the cell text.
 "
 " Defaults to 0
@@ -214,8 +214,9 @@
 " mode. By default this mapping is `\T`, but the value of <Leader> can be
 " changed by setting the g:mapleader variable.
 "
-" Note: This variable needs to be set _before_ this script is executed,
-" otherwise the default mapping will be used regardless.
+" Note: The `g:table_inhibit_mode_toggle_key` variable needs to be set
+" _before_ this script is executed, otherwise the default mapping will be used
+" regardless.
 "
 " Defaults to 0
 "

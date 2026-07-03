@@ -365,10 +365,15 @@ function! s:open_terminal()
   execute "new" "term://"..term_cmd
 endfunction
 
-function! s:half_window()
-  setlocal wrap linebreak statusline=%f
-  let width = &tw / 2
-  execute width "wincmd" "|"
+function! s:half_window(bang)
+  if empty(a:bang)
+    setlocal wrap linebreak statusline=%f
+    let width = &tw / 2
+    execute width "wincmd" "|"
+  else " assuming some defaults here for conciseness
+    setlocal nowrap nolinebreak statusline=%!CustomStatusline()
+    execute "wincmd ="
+  endif
 endfunction
 
 function! s:ddgr()
@@ -474,7 +479,7 @@ endif
 command! Terminal call <SID>open_terminal()
 
 " HalfWindow
-command! HalfWindow call <SID>half_window()
+command! -bang HalfWindow call <SID>half_window(<q-bang>)
 
 " DDGR
 command! DDGR call <SID>ddgr()

@@ -2206,42 +2206,47 @@ command! TableMode call <SID>table_mode_toggle()
 " Highlighting
 " ============
 
-function! s:conceal_match_with_char(pattern, char, priority = 10) "-> Number
+function! s:conceal_match_with_char(winid, pattern, char, priority = 10) "-> Number
   " return id of new conceal-highlight match
-  return matchadd("Conceal", a:pattern, a:priority, -1, { "conceal": a:char })
+  return matchadd("Conceal", a:pattern, a:priority, -1, { "conceal": a:char, "window": a:winid })
+endfunction
+
+function! s:hl_winid(winid, cocu)
+  let ids = []
+  call add(ids, s:conceal_match_with_char(a:winid, '-\zs|\ze-', '┼'))
+  call add(ids, s:conceal_match_with_char(a:winid, '^|\ze-',    '├'))
+  call add(ids, s:conceal_match_with_char(a:winid, '-\zs|$',    '┤'))
+  call add(ids, s:conceal_match_with_char(a:winid, ' \zs|\ze ', '│'))
+  call add(ids, s:conceal_match_with_char(a:winid, '^|\ze ',    '│'))
+  call add(ids, s:conceal_match_with_char(a:winid, ' \zs|$',    '│'))
+  call add(ids, s:conceal_match_with_char(a:winid, '\(|\|-\)\@<=-\(|\|-\)\@=', '─'))
+  call setwinvar(a:winid, "table_mode_hlmatches", ids)
+  call setwinvar(a:winid, "table_mode_restore_cocu", getwinvar(a:winid, "&concealcursor", ""))
+  call setwinvar(a:winid, "&concealcursor", a:cocu)
 endfunction
 
 function! s:highlight()
-  if ! get(g:, "table_inhibit_table_highlighting", 0)
-    let ids = []
-    call add(ids, s:conceal_match_with_char('-\zs|\ze-', '┼'))
-    call add(ids, s:conceal_match_with_char('^|\ze-',    '├'))
-    call add(ids, s:conceal_match_with_char('-\zs|$',    '┤'))
-    call add(ids, s:conceal_match_with_char(' \zs|\ze ', '│'))
-    call add(ids, s:conceal_match_with_char('^|\ze ',    '│'))
-    call add(ids, s:conceal_match_with_char(' \zs|$',    '│'))
-
-    call add(ids, s:conceal_match_with_char('\(|\|-\)\@<=-\(|\|-\)\@=', '─'))
-    let w:table_mode_hlmatches = ids
-
-    let cocu = get(g:, "table_mode_concealcursor", "nc")
-    let b:table_mode_restore_concealcursor = &concealcursor
-    let &concealcursor = cocu
+  if get(g:, "table_inhibit_table_highlighting", 0)
+    return
   endif
+
+  let l:bufnr = bufnr()
+  let cocu = get(g:, "table_mode_concealcursor", "nc")
+  for winid in win_findbuf(l:bufnr)
+    call s:hl_winid(winid, cocu)
+  endfor
 endfunction
 
 function! s:no_highlight()
-  if ! get(g:, "table_inhibit_table_highlighting", 0)
-    let ids = get(w:, "table_mode_hlmatches", [])
-    if empty(ids) | return | endif
+  let l:bufnr = bufnr()
+  for winid in win_findbuf(l:bufnr)
+    let ids = getwinvar(winid, "table_mode_hlmatches", [])
     for match_id in ids
-      call matchdelete(match_id)
+      call matchdelete(match_id, winid)
     endfor
-    unlet w:table_mode_hlmatches
-
-    let &concealcursor = b:table_mode_restore_concealcursor
-    unlet b:table_mode_restore_concealcursor
-  endif
+    call setwinvar(winid, "table_mode_hlmatches", [])
+    call setwinvar(winid, "&concealcursor", getwinvar(winid, "table_mode_restore_cocu", ""))
+  endfor
 endfunction
 
 " ==========

@@ -2026,10 +2026,21 @@ function! s:au_table_mode_disable()
   call s:no_highlight()
 endfunction
 
+function! s:au_check_table_mode_hl()
+  if ! get(b:, "table_mode", 0)
+    return
+  endif
+  let l:bufnr = bufnr()
+  let winid = win_getid()
+  call setwinvar(winid, "&concealcursor", getbufvar(l:bufnr, "table_mode_restore_cocu", ""))
+  call s:hl_winid(winid, get(g:, "table_mode_concealcursor", "nc"))
+endfunction
+
 augroup table_mode
   autocmd!
   autocmd User TableModeEnable call <SID>au_table_mode_enable()
   autocmd User TableModeDisable call <SID>au_table_mode_disable()
+  autocmd WinNew * call <SID>au_check_table_mode_hl()
 augroup END
 
 " ========
@@ -2231,6 +2242,7 @@ function! s:highlight()
   endif
 
   let l:bufnr = bufnr()
+  call setbufvar(l:bufnr, "table_mode_restore_cocu", getbufvar(l:bufnr, "&concealcursor", ""))
   let cocu = get(g:, "table_mode_concealcursor", "nc")
   for winid in win_findbuf(l:bufnr)
     call s:hl_winid(winid, cocu)

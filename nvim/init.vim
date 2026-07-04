@@ -367,7 +367,7 @@ endfunction
 
 function! s:half_window(bang)
   if empty(a:bang)
-    setlocal wrap linebreak statusline=%f
+    setlocal wrap linebreak statusline=%f%m
     let width = &tw / 2
     execute width "wincmd" "|"
   else " assuming some defaults here for conciseness

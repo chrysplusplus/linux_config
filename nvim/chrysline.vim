@@ -33,6 +33,16 @@ endfunction
 function! CustomTabline()
   let renderer = s:get_tabline_renderer(&filetype)
   let tabline = ''
+  let tabline ..= '%{%g:tabline_defaults.directory_detail()%}'
+  let tabline ..= '%{%'..renderer..'()%}'
+  let tabline ..= '%{%g:tabline_defaults.tab_page_buttons()%}'
+  return tabline
+endfunction
+
+" DirectoryButtonTabline
+function! DirectoryButtonTabline()
+  let renderer = s:get_tabline_renderer(&filetype)
+  let tabline = ''
   let tabline ..= '%{%g:tabline_defaults.directory_button()%}'
   let tabline ..= '%{%'..renderer..'()%}'
   let tabline ..= '%{%g:tabline_defaults.tab_page_buttons()%}'

@@ -10,6 +10,8 @@ nvim/*
 !mpv
 !mpv/input.conf
 !mpv/mpv.conf
+!ranger
+!ranger/rc.conf
 !tmux
 !tmux/tmux.conf
 !tmux/status.sh

@@ -652,41 +652,31 @@ augroup chrys_ft_vimwiki
   autocmd FileType vimwiki call s:vimwiki_config()
 augroup END
 
-let personal_wiki = {}
-let personal_wiki.path = '~/vimwiki/'
-let personal_wiki.name = 'Personal Wiki'
-let personal_wiki.syntax = 'markdown'
-let personal_wiki.ext = '.md'
-let personal_wiki.diary_caption_level = 1
-let personal_wiki.auto_diary_index = 1
-let personal_wiki.auto_toc = 1
-let personal_wiki.auto_tags = 1
-let personal_wiki.auto_generate_tags = 1
+function s:wiki(name, path)
+  let w = {}
+  let w.path = a:path
+  let w.name = a:name
+  let w.syntax = 'markdown'
+  let w.ext = '.md'
+  let w.diary_caption_level = 1
+  let w.auto_diary_index = 1
+  let w.auto_toc = 1
+  let w.auto_tags = 1
+  let w.auto_generate_tags = 1
+  return w
+endfunction
 
-let notes_wiki = {}
-let notes_wiki.path = '~/Documents/Notes/'
-let notes_wiki.name = 'Notes Wiki'
-let notes_wiki.syntax = 'markdown'
-let notes_wiki.ext = '.md'
-let notes_wiki.diary_caption_level = 1
-let notes_wiki.auto_diary_index = 1
-let notes_wiki.auto_toc = 1
-let notes_wiki.auto_tags = 1
-let notes_wiki.auto_generate_tags = 1
+let g:vimwiki_list = []
+
+let personal_wiki = s:wiki('Personal Wiki', '~/vimwiki/')
+call add(g:vimwiki_list, personal_wiki)
+
+let notes_wiki = s:wiki('Notes', '~/Documents/Notes')
 let notes_wiki.listsyms = ' x'
+call add(g:vimwiki_list, notes_wiki)
 
-let techtona_wiki = {}
-let techtona_wiki.path = '~/Documents/Writing/techtona_wiki/'
-let techtona_wiki.name = 'Techtona Wiki'
-let techtona_wiki.syntax = 'markdown'
-let techtona_wiki.ext = '.md'
-let techtona_wiki.diary_caption_level = 1
-let techtona_wiki.auto_diary_index = 1
-let techtona_wiki.auto_toc = 1
-let techtona_wiki.auto_tags = 1
-let techtona_wiki.auto_generate_tags = 1
-
-let g:vimwiki_list = [personal_wiki, notes_wiki, techtona_wiki]
+let techtona_wiki = s:wiki('Techtona', '~/wikis/techtona_wiki/')
+call add(g:vimwiki_list, techtona_wiki)
 
 " =========
 " Pear Tree

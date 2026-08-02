@@ -675,6 +675,9 @@ let notes_wiki = s:wiki('Notes', '~/Documents/Notes')
 let notes_wiki.listsyms = ' x'
 call add(g:vimwiki_list, notes_wiki)
 
+let writing_wiki = s:wiki('Writing', '~/wikis/writing')
+cal add(g:vimwiki_list, writing_wiki)
+
 let techtona_wiki = s:wiki('Techtona', '~/wikis/techtona_wiki/')
 call add(g:vimwiki_list, techtona_wiki)
 

@@ -64,6 +64,8 @@ function! s:config_leader_mappings()
   nnoremap <silent> <Leader>z <CMD>Goyo<cr>
   " \n -> toggle line numbers
   nnoremap <silent> <Leader>n <CMD>setl nu! rnu!<CR>
+  " \Z -> toggle tabline
+  nnoremap <silent> <Leader>Z <CMD>let &showtabline = &showtabline ? 0 : 2<CR>
 endfunction
 
 function! s:config_bracket_swapping_mappings()
@@ -439,7 +441,7 @@ command! -bang HideTabline
       \ if empty(<q-bang>)  |
       \   set showtabline=0 |
       \ else                |
-      \   set showtabline=3 |
+      \   set showtabline=2 |
       \ endif
 
 " Define

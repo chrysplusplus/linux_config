@@ -484,6 +484,10 @@ command! -bang HalfWindow call <SID>half_window(<q-bang>)
 " DDGR
 command! DDGR call <SID>ddgr()
 
+" RevertFile
+"   revert file to previous save
+command! RevertFile if &modified | earlier 1f | endif
+
 " =================
 " Vim Configuration
 " =================

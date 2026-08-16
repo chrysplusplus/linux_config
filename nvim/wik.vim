@@ -14,18 +14,18 @@ endif
 " - [ ] quick mode wik -q
 
 function! s:wik_search(search_str)
-  execute "!wik -s " .. a:search_str
+  execute printf("!wik -s \"%s\"", a:search_str)
 endfunction
 
 function! s:wik_info(topic_str)
-  let wik_cmd = "!wik -i " .. a:topic_str
+  let wik_cmd = printf("!wik -i \"%s\"", a:topic_str)
   silent execute "new" "+set\\ bt=nofile\\ nobl" "wik - " .. a:topic_str
   silent execute "read" wik_cmd
   normal go
 endfunction
 
 function! s:wik_quick(topic_str)
-  execute "!wik -q " .. a:topic_str
+  execute printf("!wik -q \"%s\"", a:topic_str)
 endfunction
 
 command! -nargs=1 WikSearch call s:wik_search(<q-args>)

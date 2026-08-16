@@ -3,6 +3,7 @@
 " =======
 source ~/.config/nvim/table.vim
 source ~/.config/nvim/chrysline.vim
+source ~/.config/nvim/wik.vim
 
 " ===================
 " Remapping Functions

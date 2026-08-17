@@ -534,6 +534,9 @@ set wildignore+=*.bak
 set mousemodel=extend
 set mousescroll=ver:2,hor:6
 
+" termguicolors
+set termguicolors
+
 " =====================
 " General Configuration
 " =====================

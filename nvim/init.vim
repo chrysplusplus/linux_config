@@ -495,6 +495,10 @@ command! DDGR call <SID>ddgr()
 "   revert file to previous save
 command! RevertFile if &modified | earlier 1f | endif
 
+" AutofitWindow
+"   resize the window width to fit text width
+command! AutofitWindow execute printf("wincmd %d |", &tw == 0 ? 85 : &tw + 5)
+
 " =================
 " Vim Configuration
 " =================

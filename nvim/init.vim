@@ -122,8 +122,8 @@ augroup chrys_ft_mappings
   autocmd FileType vimwiki call s:config_vimwiki_mappings()
 
   " in netrw, f -> /, F -> ?
-  autocmd FileType netrw nnoremap f /
-  autocmd FileType netrw nnoremap F ?
+  autocmd FileType netrw nnoremap <buffer> f /
+  autocmd FileType netrw nnoremap <buffer> F ?
 augroup END
 
 " =========

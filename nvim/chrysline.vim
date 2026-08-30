@@ -288,7 +288,7 @@ function! g:status_lights.hlsearch_renderer() "-> String"
     endif
   endfor
 
-  return printf('/%s/[%d/%d]', @/, counter, len(matches))
+  return printf('/%s/[%d/%d]', substitute(@/, '%', '%%', 'g'), counter, len(matches))
 endfunction
 
 let g:status_lights.default_lights = [

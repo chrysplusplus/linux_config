@@ -636,8 +636,8 @@ let g:vimwiki_key_mappings = {
 " disable emoji support
 let g:vimwiki_emoji_enable = 0
 
-" using syntax folding
-let g:vimwiki_folding = 'syntax'
+" disable auto write
+let g:vimwiki_autowriteall = 0
 
 function! s:vimwiki_config()
   " textwidth:80, include hyphens and apostrophes in words, and set keyword

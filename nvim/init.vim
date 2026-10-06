@@ -636,9 +636,6 @@ let g:vimwiki_key_mappings = {
 " disable emoji support
 let g:vimwiki_emoji_enable = 0
 
-" disable auto write
-let g:vimwiki_autowriteall = 0
-
 " using syntax folding
 let g:vimwiki_folding = 'syntax'
 
@@ -648,9 +645,6 @@ function! s:vimwiki_config()
   setlocal textwidth=80
   setlocal iskeyword+=-,'
   setlocal keywordprg=:DefineConfirm
-
-  " set vimwiki foldlevel
-  setlocal foldlevel=2
 
   " fix conflict with pear-tree
   let b:pear_tree_map_special_keys = 0

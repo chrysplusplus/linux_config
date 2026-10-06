@@ -639,12 +639,18 @@ let g:vimwiki_emoji_enable = 0
 " disable auto write
 let g:vimwiki_autowriteall = 0
 
+" using syntax folding
+let g:vimwiki_folding = 'syntax'
+
 function! s:vimwiki_config()
   " textwidth:80, include hyphens and apostrophes in words, and set keyword
   " program to define words with dictonary
   setlocal textwidth=80
   setlocal iskeyword+=-,'
   setlocal keywordprg=:DefineConfirm
+
+  " set vimwiki foldlevel
+  setlocal foldlevel=2
 
   " fix conflict with pear-tree
   let b:pear_tree_map_special_keys = 0

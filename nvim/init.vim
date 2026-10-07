@@ -656,6 +656,9 @@ function! s:vimwiki_config()
   " add Vcd command
   command! -buffer Vcd call <SID>change_directory_to_vimwiki_root(bufnr())
 
+  " add FixSlowSave command
+  command! -buffer FixSlowSave au! vimwiki BufWritePre <buffer>
+
   " delete deprecated VimwikiGenerateTags command
   if exists(":VimwikiGenerateTags") == 2
     delcommand -buffer VimwikiGenerateTags

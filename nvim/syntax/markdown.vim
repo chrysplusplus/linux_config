@@ -64,10 +64,13 @@ function! s:define_base_hl()
   highlight default markdownBold       cterm=bold gui=bold
   highlight default markdownImportant  cterm=bold,italic gui=bold,italic
 
+  let title_ctermfg = synIDattr(synIDtrans(hlID("Title")), "fg", "cterm")
+  let title_guifg   = synIDattr(synIDtrans(hlID("Title")), "fg", "gui")
+
   execute "highlight default markdownHeading"
-        \ "ctermfg="..synIDattr(synIDtrans(hlID("Title")), "fg", "cterm")
+        \ "ctermfg="..(empty(title_ctermfg) ? "NONE" : title_ctermfg)
         \ "cterm=bold"
-        \ "guifg="..synIDattr(synIDtrans(hlID("Title")), "fg", "gui")
+        \ "guifg="..(empty(title_guifg) ? "NONE" : title_guifg)
         \ "gui=bold"
 endfunction
 

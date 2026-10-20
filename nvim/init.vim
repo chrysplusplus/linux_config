@@ -594,6 +594,7 @@ augroup chrys_ft
   autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
   autocmd FileType dictionary setlocal keywordprg=:DefineConfirm
   autocmd FileType reminder call s:reminder_config()
+  autocmd FileType vim setlocal cursorline
 augroup END
 
 " =======

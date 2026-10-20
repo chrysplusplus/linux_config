@@ -79,6 +79,7 @@ highlight default link markdownLayout    Identifier
 highlight default link markdownHidden    Comment
 highlight default link markdownCode      PreProc
 highlight default link markdownDate      PreProc
+highlight default link markdownSymbol    String
 
 call s:define_base_hl()
 
@@ -105,8 +106,8 @@ highlight default link markdownH6Delimiter markdownHeadingDelimiter
 highlight default link markdownCodeBlock     markdownCode
 highlight default link markdownCodeDelimiter markdownCode
 highlight default link markdownLineBreak     markdownDelimiter
-highlight default link markdownUL            markdownLayout
-highlight default link markdownOL            markdownLayout
+highlight default link markdownUL            markdownSymbol
+highlight default link markdownOL            markdownSymbol
 
 augroup markdown
   autocmd!

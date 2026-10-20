@@ -61,17 +61,21 @@ syntax region markdownYamlHeader matchgroup=markdownYamlHeader start="\%^---.*$"
 syntax match markdownEscaped "\\[[*_`]" transparent contains=markdownEscapeDelimiter
 syntax match markdownEscapeDelimiter "\\" transparent contained conceal
 
+function! s:define_base_hl()
+  highlight default markdownItalic     cterm=italic gui=italic
+  highlight default markdownBold       cterm=bold gui=bold
+  highlight default markdownImportant  cterm=bold,italic gui=bold,italic
+  highlight default markdownLink       cterm=underline gui=underline
+endfunction
+
 highlight default link markdownHeading   Title
-highlight default link markdownDelimiter NonText
+highlight default link markdownDelimiter Comment
 highlight default link markdownLayout    Identifier
 highlight default link markdownHidden    Comment
 highlight default link markdownCode      PreProc
 highlight default link markdownDate      PreProc
 
-highlight default markdownItalic     cterm=italic gui=italic
-highlight default markdownBold       cterm=bold gui=bold
-highlight default markdownImportant  cterm=bold,italic gui=bold,italic
-highlight default markdownLink       cterm=underline gui=underline
+call s:define_base_hl()
 
 highlight default link markdownH1                markdownHeading
 highlight default link markdownH2                markdownHeading
@@ -99,6 +103,11 @@ highlight default link markdownLineBreak     markdownDelimiter
 highlight default link markdownUL            markdownLayout
 highlight default link markdownOL            markdownLayout
 highlight default link markdownBullet        markdownLayout
+
+augroup markdown
+  autocmd!
+  autocmd ColorScheme * call s:define_base_hl()
+augroup END
 
 let b:current_syntax = "markdown"
 

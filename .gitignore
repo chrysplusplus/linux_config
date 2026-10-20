@@ -8,6 +8,8 @@ nvim/*
 !nvim/wik.vim
 !nvim/autoload
 !nvim/autoload/plug.vim
+!nvim/syntax
+!nvim/syntax/markdown.vim
 !mpv
 !mpv/input.conf
 !mpv/mpv.conf

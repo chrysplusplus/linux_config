@@ -32,10 +32,8 @@ syntax match markdownLineBreak "<br>$" display contains=@NoSpell
 syntax match markdownLineBreak "\\$" display
 syntax match markdownLineBreak " \{2,}$" display
 
-syntax match markdownUL "\%(\t\| \{0,4}\)[-*+] " display contained contains=markdownBullet
+syntax match markdownUL "\%(\t\| \{0,4}\)[-*+] " display contained
 syntax match markdownOL "\%(\t\| \{0,4}\)\<\d\+.\s\+" display contained
-
-syntax match markdownBullet "[-*+]" display contained conceal cchar=•
 
 syntax match markdownLink "\\\@<!\[[^][]*\]([^][()]*)" display contains=markdownLinkText
 syntax region markdownLinkText matchgroup=markdownLink start="\[" end="\]" nextgroup=markdownLinkURI keepend display contained concealends
@@ -106,7 +104,6 @@ highlight default link markdownCodeDelimiter markdownCode
 highlight default link markdownLineBreak     markdownDelimiter
 highlight default link markdownUL            markdownLayout
 highlight default link markdownOL            markdownLayout
-highlight default link markdownBullet        markdownLayout
 
 augroup markdown
   autocmd!

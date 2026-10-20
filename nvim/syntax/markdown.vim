@@ -65,10 +65,14 @@ function! s:define_base_hl()
   highlight default markdownItalic     cterm=italic gui=italic
   highlight default markdownBold       cterm=bold gui=bold
   highlight default markdownImportant  cterm=bold,italic gui=bold,italic
-  highlight default markdownLink       cterm=underline gui=underline
+
+  execute "highlight default markdownHeading"
+        \ "ctermfg="..synIDattr(synIDtrans(hlID("Title")), "fg", "cterm")
+        \ "cterm=bold"
+        \ "guifg="..synIDattr(synIDtrans(hlID("Title")), "fg", "gui")
+        \ "gui=bold"
 endfunction
 
-highlight default link markdownHeading   Title
 highlight default link markdownDelimiter Comment
 highlight default link markdownLayout    Identifier
 highlight default link markdownHidden    Comment
@@ -88,7 +92,7 @@ highlight default link markdownHeadingDelimiter  markdownDelimiter
 highlight default link markdownHznRule           markdownLayout
 highlight default link markdownHiddenDelimiter   markdownHidden
 highlight default link markdownYamlHeader        markdownHidden
-highlight default link markdownLinkText          markdownLink
+highlight default link markdownLinkText          Underlined
 
 highlight default link markdownH1Delimiter markdownHeadingDelimiter
 highlight default link markdownH2Delimiter markdownHeadingDelimiter

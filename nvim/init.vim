@@ -362,7 +362,7 @@ endfunction
 
 function! s:open_terminal()
   call inputsave()
-  let term_cmd = input("Terminal (defaults to `bash`): ")
+  let term_cmd = input("Terminal: ", "bash")
   call inputrestore()
 
   if len(term_cmd) == 0

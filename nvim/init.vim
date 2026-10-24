@@ -99,6 +99,10 @@ function! s:config_misc_mappings()
 
   " Q -> format paragraph
   nnoremap Q gwap
+
+  " Ctrl-U and Ctrl-D report scroll value
+  nnoremap <silent> <C-U> <C-U><CMD>if &cmdheight != 0<bar>echo 'Scrolled up '..&scroll..' lines'<bar>endif<CR>
+  nnoremap <silent> <C-D> <C-D><CMD>if &cmdheight != 0<bar>echo 'Scrolled down '..&scroll..' lines'<bar>endif<CR>
 endfunction
 
 function! s:config_command_keys()

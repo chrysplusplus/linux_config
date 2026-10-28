@@ -594,6 +594,7 @@ endfunction
 augroup chrys_ft
   autocmd!
   autocmd FileType c setlocal cursorline
+  autocmd FileType cpp setlocal cursorline
   autocmd FileType markdown call s:markdown_config()
   autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
   autocmd FileType dictionary setlocal keywordprg=:DefineConfirm

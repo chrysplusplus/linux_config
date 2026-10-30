@@ -1,9 +1,9 @@
 " =======
 " Sources
 " =======
-source ~/.config/nvim/table.vim
-source ~/.config/nvim/chrysline.vim
-source ~/.config/nvim/wik.vim
+runtime table.vim
+runtime chrysline.vim
+runtime wik.vim
 
 " ===================
 " Remapping Functions

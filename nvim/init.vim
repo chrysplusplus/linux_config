@@ -53,6 +53,13 @@ function! s:config_telescope_mappings()
   "nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
 endfunction
 
+function! s:config_alt_mappings()
+  " Alt-J -> list Jumps
+  nnoremap <silent> <M-j> <CMD>jumps<CR>
+  " Alt-B -> list Buffers
+  nnoremap <silent> <M-b> <CMD>buffers<CR>
+endfunction
+
 function! s:config_leader_mappings()
   " \s -> toggle spell check
   nnoremap <silent> <Leader>s <CMD>setl spell!<CR>
@@ -119,6 +126,7 @@ call s:config_misc_mappings()
 call s:config_bracket_swapping_mappings()
 call s:config_leader_mappings()
 call s:config_telescope_mappings()
+call s:config_alt_mappings()
 call s:config_command_keys()
 
 " filetype-specific mappings

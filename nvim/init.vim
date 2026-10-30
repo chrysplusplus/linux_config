@@ -33,23 +33,24 @@ function! s:config_vimwiki_mappings()
   inoremap <silent> <buffer> <BS> <Plug>(PearTreeBackspace)
 endfunction
 
+" TODO remove
 function! s:config_telescope_mappings()
   " Alt-E -> pick a buffer
-  nnoremap <silent> <M-e> <CMD>Telescope buffers<CR>
+  "nnoremap <silent> <M-e> <CMD>Telescope buffers<CR>
   " \er -> grep
-  nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
+  "nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
   " \et -> pick a tag
-  nnoremap <silent> <Leader>et <CMD>Telescope tags<CR>
+  "nnoremap <silent> <Leader>et <CMD>Telescope tags<CR>
   " \ep -> list all builtin pickers
-  nnoremap <silent> <Leader>ep <CMD>Telescope builtin<CR>
+  "nnoremap <silent> <Leader>ep <CMD>Telescope builtin<CR>
   " \ef -> pick files
-  nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
+  "nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
   " \ec -> pick a command from command history
-  nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
+  "nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
   " \em -> pick a mark
-  nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
+  "nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
   " Alt-F -> fuzzy find in the current buffer
-  nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
+  "nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
 endfunction
 
 function! s:config_leader_mappings()

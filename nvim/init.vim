@@ -199,7 +199,16 @@ endfunction
 "   save the current file if it has been modified
 function! SaveCurrentModifiedFile()
   if &modified
-    write
+    try
+      write
+    catch /^Vim\%((\a\+)\)\=:E32:/ " No file name
+      call inputsave()
+      let filename = input("File name: ")
+      call inputrestore()
+      if len(filename) > 0
+        execute "write" filename
+      endif
+    endtry
   endif
 endfunction
 

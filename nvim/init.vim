@@ -626,6 +626,7 @@ augroup END
 "  use :PlugInstall to actually install them
 call plug#begin('~/.config/nvim/plugged')
 Plug 'chrysplusplus/onedark.vim'
+Plug 'chrysplusplus/vim-filetypes'
 
 Plug 'vimwiki/vimwiki'
 

@@ -8,8 +8,13 @@ nvim/*
 !nvim/wik.vim
 !nvim/autoload
 !nvim/autoload/plug.vim
+!nvim/ftplugin
+!nvim/ftplugin/teal.vim
+!nvim/indent
+!nvim/indent/teal.vim
 !nvim/syntax
 !nvim/syntax/markdown.vim
+!nvim/syntax/teal.vim
 !mpv
 !mpv/input.conf
 !mpv/mpv.conf

@@ -611,14 +611,11 @@ endfunction
 
 augroup chrys_ft
   autocmd!
-  autocmd FileType c setlocal cursorline
-  autocmd FileType cpp setlocal cursorline
-  autocmd FileType make setlocal cursorline
+  autocmd FileType \vc|cpp|lua|make|teal|vim setlocal cursorline
   autocmd FileType markdown call s:markdown_config()
   autocmd FileType qf setlocal statusline=%!QuickfixStatusline()
   autocmd FileType dictionary setlocal keywordprg=:DefineConfirm
   autocmd FileType reminder call s:reminder_config()
-  autocmd FileType vim setlocal cursorline
 augroup END
 
 " =======

@@ -56,8 +56,14 @@ endfunction
 function! s:config_alt_mappings()
   " Alt-J -> list Jumps
   nnoremap <silent> <M-j> <CMD>jumps<CR>
+  " Alt-L -> open location list
+  nnoremap <silent> <M-l> <CMD>lopen<CR>
+  " Alt-C -> open quickfix
+  nnoremap <silent> <M-c> <CMD>copen<CR>
   " Alt-B -> list Buffers
   nnoremap <silent> <M-b> <CMD>buffers<CR>
+  " Alt-M -> list Messages
+  nnoremap <silent> <M-m> <CMD>messages<CR>
 endfunction
 
 function! s:config_leader_mappings()

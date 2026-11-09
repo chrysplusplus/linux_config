@@ -115,12 +115,25 @@ function! s:config_misc_mappings()
   nnoremap Q gwap
 endfunction
 
-function! s:config_command_keys()
+function! s:config_emacs_keys()
   " inspired by emacs-keys in the vim manual
+
+  " command mode
   cnoremap <C-A> <Home>
   cnoremap <C-B> <Left>
   cnoremap <C-E> <End>
   cnoremap <C-F> <Right>
+
+  " insert mode
+  inoremap <C-A> <C-O>^
+  inoremap <C-B> <Left>
+  inoremap <C-E> <C-O>$
+  inoremap <C-F> <Right>
+  inoremap <C-Y> <Nop>
+
+  " normal mode
+  nnoremap <C-A> <Nop>
+  nnoremap <C-X> <Nop>
 endfunction
 
 " global mappings
@@ -129,7 +142,7 @@ call s:config_bracket_swapping_mappings()
 call s:config_leader_mappings()
 call s:config_telescope_mappings()
 call s:config_alt_mappings()
-call s:config_command_keys()
+call s:config_emacs_keys()
 
 " filetype-specific mappings
 augroup chrys_ft_mappings

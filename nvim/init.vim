@@ -33,27 +33,9 @@ function! s:config_vimwiki_mappings()
   inoremap <silent> <buffer> <BS> <Plug>(PearTreeBackspace)
 endfunction
 
-" TODO remove
-function! s:config_telescope_mappings()
-  " Alt-E -> pick a buffer
-  "nnoremap <silent> <M-e> <CMD>Telescope buffers<CR>
-  " \er -> grep
-  "nnoremap <silent> <Leader>er <CMD>Telescope live_grep<CR>
-  " \et -> pick a tag
-  "nnoremap <silent> <Leader>et <CMD>Telescope tags<CR>
-  " \ep -> list all builtin pickers
-  "nnoremap <silent> <Leader>ep <CMD>Telescope builtin<CR>
-  " \ef -> pick files
-  "nnoremap <silent> <Leader>ef <CMD>Telescope find_files<CR>
-  " \ec -> pick a command from command history
-  "nnoremap <silent> <Leader>ec <CMD>Telescope command_history<cr>
-  " \em -> pick a mark
-  "nnoremap <silent> <Leader>em <CMD>Telescope marks<CR>
-  " Alt-F -> fuzzy find in the current buffer
-  "nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
-endfunction
-
 function! s:config_alt_mappings()
+  " Alt-F -> find in file
+  nnoremap <silent> <M-f> <CMD>Telescope current_buffer_fuzzy_find<CR>
   " Alt-J -> list Jumps
   nnoremap <silent> <M-j> <CMD>jumps<CR>
   " Alt-L -> open location list
@@ -61,7 +43,7 @@ function! s:config_alt_mappings()
   " Alt-C -> open quickfix
   nnoremap <silent> <M-c> <CMD>copen<CR>
   " Alt-B -> list Buffers
-  nnoremap <silent> <M-b> <CMD>buffers<CR>
+  nnoremap <silent> <M-b> <CMD>Telescope buffers<CR>
   " Alt-M -> list Messages
   nnoremap <silent> <M-m> <CMD>messages<CR>
 endfunction
@@ -140,7 +122,6 @@ endfunction
 call s:config_misc_mappings()
 call s:config_bracket_swapping_mappings()
 call s:config_leader_mappings()
-call s:config_telescope_mappings()
 call s:config_alt_mappings()
 call s:config_emacs_keys()
 
@@ -155,7 +136,8 @@ augroup chrys_ft_mappings
   autocmd FileType netrw nnoremap <buffer> f /
   autocmd FileType netrw nnoremap <buffer> F ?
   autocmd FileType netrw nmap <buffer> l <CR>
-  autocmd FileType netrw nmap <buffer> h -
+  autocmd FileType netrw nmap <buffer> h <Plug>VinegarUp
+  autocmd FileType netrw nmap <buffer> <silent> - <CMD>e.<CR>
 augroup END
 
 " =========
@@ -770,6 +752,7 @@ require("telescope").setup{
   defaults = {
       mappings = {
           i = {
+              ["<Esc>"] = require("telescope.actions").close,
               ["<C-_>"] = function()
                 vim.cmd [[normal! bcw]]
               end,
